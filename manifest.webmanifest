@@ -1,0 +1,14 @@
+{
+  "name": "中国象棋 · 离线版",
+  "short_name": "象棋",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2b1a0e",
+  "theme_color": "#2b1a0e",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
