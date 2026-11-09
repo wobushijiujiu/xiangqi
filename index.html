@@ -19,6 +19,7 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+html { background: #2b1a0e; }
 body {
   background: linear-gradient(160deg, var(--bg2), var(--bg)); color: var(--text);
   font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -27,10 +28,13 @@ body {
 button, select, input { font: inherit; }
 #app { position: fixed; inset: 0; display: flex; flex-direction: column;
   padding: var(--safe-t) var(--safe-r) 0 var(--safe-l); }
-#topbar { flex: none; height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; color: var(--topText); }
-#topbar .title { font-family: "Kaiti SC", STKaiti, KaiTi, serif; font-size: 20px; letter-spacing: 3px; font-weight: bold; }
-#status { font-size: 15px; font-weight: 600; text-align: right; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#main { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+/* 主屏幕（standalone）模式下 iOS 视口可能比屏幕短一截，由 JS 设置 --appH 修正 */
+html.fixH #app { bottom: auto; height: var(--appH); }
+.gRow { flex: none; display: flex; align-items: center; gap: 8px; min-height: 26px; margin-bottom: 4px; }
+#gInfo { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#status { flex: none; font-size: 15px; font-weight: 600; text-align: right; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#status.red { color: var(--accent); }
+#main { flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 4px; }
 #boardWrap { flex: none; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; position: relative; }
 #cv { display: block; touch-action: none; }
 #panel { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-radius: 14px 14px 0 0; overflow: hidden; }
@@ -45,49 +49,72 @@ button, select, input { font: inherit; }
 .capBar .who { opacity: .75; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 .capBar .who.on { opacity: 1; font-weight: bold; }
 .capBar .who.on::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 4px #3ddc84; }
-.capBar .lost { opacity: .7; margin-right: 3px; }
+.capBar .lost { flex: none; opacity: .7; margin-right: 3px; white-space: nowrap; }
+.capBar .who { flex: none; }
+.cpw { flex: none; position: relative; display: inline-flex; margin-right: 1px; }
+.cpw:has(b) { margin-right: 5px; }
+.cpw b { position: absolute; right: -3px; bottom: -3px; min-width: 12px; height: 12px; padding: 0 2px; border-radius: 6px; background: #c0392b; color: #fff; font: bold 9px/12px sans-serif; text-align: center; }
 .cp { flex: none; width: 19px; height: 19px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font: bold 12px "Kaiti SC", STKaiti, KaiTi, serif;
   background: radial-gradient(circle at 35% 35%, var(--pa), var(--pb)); border: 1px solid var(--pedge); box-shadow: 0 1px 2px rgba(0,0,0,.35); }
 .cp.r { color: var(--pred); } .cp.b { color: var(--pblack); }
 /* 复盘页 */
 @media (max-width: 819px) and (max-height: 720px) { #evalGraph { display: none !important; } }
-#rvHead, #evalGraph, .rvNav { flex: none; }
+#rvHead, #evalGraph, #rvBar { flex: none; }
 .rvMeta { display: none; font-size: 12px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rvAcc { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .rvAcc .acc { flex: none; font-size: 13px; white-space: nowrap; }
 .rvAcc .acc b { color: var(--accent); font-size: 17px; }
-.chips { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.chips { flex: 1; min-width: 0; display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
 .chips::-webkit-scrollbar, .mstrip::-webkit-scrollbar { display: none; }
-.chip { flex: none; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 12px; font-size: 12px; background: var(--btn); color: var(--btnText); border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
+.chip { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 14px; font-size: 13px; background: var(--btn); color: var(--btnText); border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
 .chip.on { background: var(--accent); color: #fff; }
 .anaRow { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
 .anaRow .progress { flex: 1; margin: 0; }
-.rvNav { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
-.rvNav > .btn { flex: none; width: 46px; padding: 6px 0; font-size: 16px; }
-.mstrip { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-.mi { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 6px 8px; border-radius: 7px; background: var(--btn); color: var(--btnText); font-size: 13px; white-space: nowrap; cursor: pointer; }
+.mstrip { flex: none; display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin: 6px 0; }
+.mi { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 7px 10px; border-radius: 8px; background: var(--btn); color: var(--btnText); font-size: 14px; white-space: nowrap; cursor: pointer; }
 .mi i { font-style: normal; color: var(--muted); font-size: 11px; }
 .mi.cur { background: var(--accent); color: #fff; } .mi.cur i { color: #fff; }
 .mi .x { color: #e74c3c; font-weight: bold; font-size: 12px; } .mi.cur .x { color: #ffe08a; }
 #rvCard { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 #rvCard .card { margin-bottom: 0; }
-#tabs { flex: none; display: flex; border-top: 1px solid var(--line); background: var(--card); padding-bottom: var(--safe-b); order: 2; }
-#tabs button { flex: 1; border: 0; background: none; padding: 7px 0 6px; color: var(--muted); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+#rvCard .card h3 { font-size: 15px; }
+/* 复盘底部操作栏：大按钮；演示时「退出」在最左、◀ ▶ 在右侧，拉开距离防误触 */
+#rvBar { display: flex; align-items: center; gap: 6px; padding-top: 8px; }
+#rvBar .btn { height: 44px; padding: 0 6px; font-size: 15px; white-space: nowrap; }
+#rvBar .ed { flex: none; width: 46px; font-size: 14px; }
+#rvBar .st { flex: 1.3; }
+#rvBar .pos { flex: 1; min-width: 56px; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.25; white-space: nowrap; }
+#rvBar .pos b { display: block; color: var(--text); font-size: 15px; }
+#rvBar .exit { flex: none; padding: 0 12px; background: var(--card); color: var(--accent); border-color: var(--accent); }
+#rvBar .gap { flex: 1; min-width: 12px; }
+#rvBar .vst { flex: none; width: 76px; }
+#tabs { flex: none; display: flex; border-top: 1px solid var(--line); background: var(--card); padding-bottom: max(2px, calc(var(--safe-b) - 20px)); order: 2; }
+#tabs button { flex: 1; border: 0; background: none; padding: 6px 0 4px; color: var(--muted); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 #tabs button .ic { font-size: 19px; line-height: 1; font-family: "Kaiti SC", STKaiti, KaiTi, serif; font-weight: bold; }
 #tabs button.on { color: var(--accent); }
 body.noboard #boardWrap { display: none; }
 body.noboard #panel { border-radius: 0; }
 
 @media (min-width: 820px) and (min-aspect-ratio: 1/1) {
-  #main { flex-direction: row; padding: 8px 12px 12px; gap: 14px; }
+  #main { flex-direction: row; padding: 12px 12px 12px; gap: 14px; }
   #boardWrap { flex: 1; justify-content: center; align-items: center; }
   body.noboard #boardWrap { display: flex; }
   #panel { flex: none; width: 400px; border-radius: 14px; }
   #tabs { order: 0; border-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 0; }
   .rvMeta { display: block; }
+  .rvAcc { flex-wrap: wrap; row-gap: 6px; }
+  .chips { flex: 1 1 100%; flex-wrap: wrap; overflow: visible; }
   #evalGraph { height: 80px !important; }
-  .rvNav { align-items: flex-start; }
-  .mstrip { flex-wrap: wrap; align-content: flex-start; max-height: 32vh; overflow-x: hidden; overflow-y: auto; }
+  #rvMoves { flex: 1 1 0; min-height: 120px; margin: 8px 0 0; display: block; overflow-x: hidden; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+  .mgrid { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 3px 4px; align-items: center; }
+  .mgrid .no { color: var(--muted); font-size: 12px; text-align: right; padding-right: 2px; }
+  .mgrid .mi { display: flex; padding: 5px 8px; font-size: 14px; background: none; }
+  .mgrid .mi:hover { background: var(--btn); }
+  .mgrid .mi.cur { background: var(--accent); }
+  .mgrid .mi i { display: none; }
+  .mgrid .full { grid-column: 1 / -1; }
+  #rvCard { flex: none; max-height: 42%; margin-top: 8px; }
+  .playList { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
 }
 
 .btn { border: 1px solid rgba(0,0,0,.12); background: var(--btn); color: var(--btnText); padding: 9px 12px; border-radius: 10px; font-size: 15px; cursor: pointer; }
@@ -102,9 +129,11 @@ body.noboard #panel { border-radius: 0; }
 h3 { margin: 4px 0 8px; font-size: 16px; }
 .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sp { flex: 1; }
-.movelist { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 2px 6px; font-size: 14px; }
+.movelist { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 2px 6px; font-size: 14px; align-items: center; }
 .movelist .no { color: var(--muted); text-align: right; padding: 4px 0; }
-.movelist .mv { padding: 4px 6px; border-radius: 6px; display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
+.movelist .mv { padding: 4px 6px; border-radius: 6px; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.movelist .mv.last { background: var(--btn); font-weight: 600; }
+.movelist .mv .who { font-size: 11px; color: var(--muted); }
 .movelist .mv.cur { background: var(--accent); color: #fff; }
 .badge { display: inline-block; font-size: 11px; padding: 1px 5px; border-radius: 5px; color: #fff; line-height: 1.5; white-space: nowrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
@@ -162,7 +191,6 @@ table.st th { color: var(--muted); font-weight: normal; }
 </head>
 <body>
 <div id="app">
-  <header id="topbar"><div class="title">中国象棋</div><div id="status"></div></header>
   <main id="main">
     <section id="boardWrap"><div class="capBar" id="capTop"></div><canvas id="cv"></canvas><div class="capBar" id="capBot"></div></section>
     <section id="panel">
@@ -175,7 +203,7 @@ table.st th { color: var(--muted); font-weight: normal; }
       </nav>
       <div id="pages">
         <div class="page on" id="pg-play">
-          <div class="row"><span id="gInfo" class="muted"></span><span class="sp"></span><span id="gTurn" class="muted"></span></div>
+          <div class="gRow"><span id="gInfo" class="muted"></span><span id="status"></span></div>
           <div class="btns">
             <button class="btn primary" id="bNew">新局</button>
             <button class="btn" id="bUndo">悔棋</button>
@@ -183,7 +211,7 @@ table.st th { color: var(--muted); font-weight: normal; }
             <button class="btn" id="bDraw">求和</button>
             <button class="btn" id="bResign">认输</button>
           </div>
-          <div class="movelist" id="playMoves"></div>
+          <div class="movelist playList" id="playMoves"></div>
         </div>
         <div class="page" id="pg-review"></div>
         <div class="page" id="pg-history"></div>
@@ -1547,12 +1575,17 @@ function lostPieces(bd, side) { // side 方被吃掉的子（按价值排序）
   for (const t of [5, 4, 6, 2, 3, 7]) for (let i = have[t]; i < start[t]; i++) out.push((side << 3) | t);
   return out;
 }
+function groupLost(lost) { // 同类棋子合并显示，右下角标数量，避免子多时挤出栏外
+  const out = [];
+  for (const p of lost) { const last = out[out.length - 1]; if (last && last[0] === p) last[1]++; else out.push([p, 1]); }
+  return out;
+}
 // 棋盘上下的吃子栏：每一方旁边显示该方被吃掉的子
 function renderCaps(bd, flip, stm, label) {
   for (const [id, side] of [["#capTop", flip ? 0 : 1], ["#capBot", flip ? 1 : 0]]) {
     const lost = lostPieces(bd, side);
     $(id).innerHTML = `<span class="who ${stm === side ? "on" : ""}">${label(side)}</span><span class="sp"></span>` +
-      (lost.length ? `<span class="lost">被吃</span>` + lost.map(p => `<i class="cp ${p >> 3 ? "b" : "r"}">${PNAME[p]}</i>`).join("") : "");
+      (lost.length ? `<span class="lost">被吃</span>` + groupLost(lost).map(([p, k]) => `<span class="cpw"><i class="cp ${p >> 3 ? "b" : "r"}">${PNAME[p]}</i>${k > 1 ? `<b>${k}</b>` : ""}</span>`).join("") : "");
   }
 }
 const sideLabel = (mode, human, level) => s => mode === "ai" ? (s === human ? `我（${s ? "黑" : "红"}）` : `电脑 · ${level}级（${s ? "黑" : "红"}）`) : SIDE_NAME[s];
@@ -1563,12 +1596,12 @@ function refreshPlay() {
   if (G.result) st = G.result === "d" ? "和棋" : (G.result === "r" ? "红方胜" : "黑方胜") + " · " + G.reason;
   else if (thinking) st = "电脑思考中";
   else st = (E.inCheck(side) ? "将军！" : "") + (G.mode === "ai" ? (side === G.human ? "轮到你走" : "电脑走棋") : "轮到" + SIDE_NAME[side]);
-  if (curTab === "play") { const s = $("#status"); s.textContent = st; s.className = thinking ? "thinking" : ""; s.style.color = G.result ? "" : (side === 0 ? "#ff8a7a" : ""); }
-  $("#gInfo").textContent = G.mode === "ai" ? `人机 · ${G.level}级${LEVEL_NAMES[G.level]} · 我执${G.human === 0 ? "红" : "黑"}` : "双人对战";
-  $("#gTurn").textContent = `第 ${Math.floor(G.moves.length / 2) + 1} 回合`;
-  const names = namesOf(G.moves);
+  { const s = $("#status"); s.textContent = st; s.className = (thinking ? "thinking" : "") + (!G.result && side === 0 ? " red" : ""); }
+  $("#gInfo").textContent = (G.mode === "ai" ? `${G.level}级${LEVEL_NAMES[G.level]} · 我执${G.human === 0 ? "红" : "黑"}` : "双人对战") + ` · 第 ${Math.floor(G.moves.length / 2) + 1} 回合`;
+  const names = namesOf(G.moves), nm = names.length;
   let html = "";
-  for (let i = 0; i < names.length; i += 2) html += `<div class="no">${i / 2 + 1}.</div><div class="mv">${names[i]}</div><div class="mv">${names[i + 1] || ""}</div>`;
+  for (let i = 0; i < nm; i += 2) html += `<div class="no">${i / 2 + 1}.</div><div class="mv ${i === nm - 1 ? "last" : ""}">${names[i]}</div><div class="mv ${i + 1 === nm - 1 ? "last" : ""}">${names[i + 1] || ""}</div>`;
+  if (!nm) html = `<div></div><div class="muted" style="grid-column:2/4;padding:4px 6px">${G.mode === "ai" && G.human === 1 ? "电脑先走" : "点击棋子开始走棋"}</div>`;
   $("#playMoves").innerHTML = html;
   { const pm = $("#playMoves"); pm.scrollTop = pm.scrollHeight; }
   $("#bUndo").disabled = !G.moves.length || !!G.result;
@@ -1601,6 +1634,15 @@ cv.addEventListener("pointerdown", e => {
   if (curTab === "play" || (wide() && curTab !== "review")) playClick(sq);
   else if (curTab === "review" && RVS && RVS.tryMode) tryClick(sq);
 });
+// 复盘时在棋盘上左右滑动：上一步 / 下一步
+let swipe = null;
+cv.addEventListener("pointerdown", e => { swipe = curTab === "review" && RVS && !RVS.tryMode ? { x: e.clientX, y: e.clientY } : null; });
+cv.addEventListener("pointerup", e => {
+  if (!swipe) return;
+  const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y; swipe = null;
+  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) navReview(dx < 0 ? "next" : "prev");
+});
+cv.addEventListener("pointercancel", () => { swipe = null; });
 function selectLogic(engine, sq, onMove) {
   const b = engine.board(), p = b[sq], side = engine.side();
   if (sel >= 0 && targets.includes(sq)) { const mv = (sel << 7) | sq; sel = -1; targets = []; onMove(mv); return; }
@@ -1768,9 +1810,9 @@ function renderReview(full) {
   if (full || !$("#rvHead")) {
     pg.innerHTML = `<div id="rvHead"></div>
       <canvas id="evalGraph"></canvas>
-      <div class="rvNav"><button class="btn" data-nav="prev">◀</button><div class="mstrip" id="rvMoves"></div><button class="btn" data-nav="next">▶</button></div>
-      <div id="rvCard"></div>`;
-    pg.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => navReview(b.dataset.nav));
+      <div class="mstrip" id="rvMoves"></div>
+      <div id="rvCard"></div>
+      <div id="rvBar"></div>`;
     $("#evalGraph").onclick = e => {
       const r = e.target.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width;
       RVS.vari = null; RVS.tryMode = null; sel = -1; targets = [];
@@ -1802,49 +1844,77 @@ function renderReview(full) {
   });
   const go = $("#rvGo"); if (go) go.onclick = () => { runAnalysis(rec); renderReview(false); };
   drawEvalGraph();
-  // 着法条：正常时显示对局着法（可筛选），演示时显示演示变化
-  const names = namesOf(rec.moves);
-  let html = "";
+  // 着法：手机上为横向滑动条，电脑上按回合排成「红 | 黑」两列表格；演示时显示演示变化
+  const names = namesOf(rec.moves), grid = wide();
+  const items = []; // [绝对步序 j, html]
   if (RVS.vari) {
     const v = RVS.vari, ln = namesOf(v.line, rec.moves.slice(0, v.base));
-    html = `<span class="mi ${v.idx === 0 ? "cur" : ""}" data-k="0">起点</span>` + ln.map((s, k) =>
-      `<span class="mi ${v.idx === k + 1 ? "cur" : ""}" data-k="${k + 1}"><i>${(v.base + k) % 2 === 0 ? "红" : "黑"}</i>${s}${v.caps[k] ? `<span class="x">吃${PNAME[v.caps[k]].replace(/[帅将]/, "将")}</span>` : ""}</span>`).join("");
-  } else {
-    const ps = filteredPlies();
-    for (const p of ps) {
-      const j = p - 1, g = evalMove(rec, j);
-      html += `<span class="mi ${RVS.ply === p ? "cur" : ""}" data-ply="${p}">${g ? `<span class="dot" style="background:${GRADES[g.grade].c}"></span>` : ""}<i>${Math.floor(j / 2) + 1}${j % 2 ? "…" : "."}</i>${names[j]}</span>`;
+    ln.forEach((s, k) => items.push([v.base + k, `<span class="mi ${v.idx === k + 1 ? "cur" : ""}" data-k="${k + 1}"><i>${(v.base + k) % 2 === 0 ? "红" : "黑"}</i>${s}${v.caps[k] ? `<span class="x">吃${PNAME[v.caps[k]].replace(/[帅将]/, "将")}</span>` : ""}</span>`]));
+  } else for (const p of filteredPlies()) {
+    const j = p - 1, g = evalMove(rec, j);
+    items.push([j, `<span class="mi ${RVS.ply === p ? "cur" : ""}" data-ply="${p}">${g ? `<span class="dot" style="background:${GRADES[g.grade].c}"></span>` : ""}<i>${Math.floor(j / 2) + 1}${j % 2 ? "…" : "."}</i>${names[j]}</span>`]);
+  }
+  const start = RVS.vari ? `<span class="mi ${RVS.vari.idx === 0 ? "cur" : ""} full" data-k="0">${grid ? "↺ 演示起点" : "起点"}</span>` : "";
+  let html;
+  if (!items.length && !RVS.vari) html = `<span class="muted" style="padding:6px">${RVS.filter ? "没有符合条件的着法" : "无着法"}</span>`;
+  else if (!grid) html = start + items.map(x => x[1]).join("");
+  else {
+    html = `<div class="mgrid">${start}`;
+    for (let k = 0; k < items.length; k++) {
+      const [j, h] = items[k], rd = Math.floor(j / 2);
+      if (j % 2 === 0) { const nx = items[k + 1]; html += `<span class="no">${rd + 1}.</span>${h}${nx && nx[0] === j + 1 ? (k++, nx[1]) : "<span></span>"}`; }
+      else html += `<span class="no">${rd + 1}.</span><span></span>${h}`;
     }
-    if (!ps.length) html = `<span class="muted" style="padding:6px">${RVS.filter ? "没有符合条件的着法" : "无着法"}</span>`;
+    html += `</div>`;
   }
   $("#rvMoves").innerHTML = html;
   $("#rvMoves").querySelectorAll("[data-ply]").forEach(d => d.onclick = () => { RVS.vari = null; RVS.tryMode = null; RVS.ply = +d.dataset.ply; sel = -1; targets = []; renderReview(false); });
   $("#rvMoves").querySelectorAll("[data-k]").forEach(d => d.onclick = () => { RVS.vari.idx = +d.dataset.k; renderReview(false); });
+  renderBar();
   renderCard(names);
   setReviewView();
   scrollMoveList();
 }
+function renderBar() { // 复盘底部操作栏
+  const bar = $("#rvBar"), rec = RVS.rec, n = rec.moves.length;
+  if (RVS.tryMode) {
+    bar.innerHTML = `<button class="btn exit" id="tExit">✕ 退出练习</button><span class="gap"></span><button class="btn primary" id="tAns" style="padding:0 18px">看答案</button>`;
+    $("#tAns").onclick = () => { const i = RVS.tryMode.base, a = rec.analysis.plies[i]; RVS.tryMode = null; startVari("best"); toast("答案：" + namesOf([a.best], rec.moves.slice(0, i))[0]); };
+    $("#tExit").onclick = () => { RVS.tryMode = null; sel = -1; targets = []; renderReview(false); };
+    return;
+  }
+  if (RVS.vari) {
+    const v = RVS.vari;
+    bar.innerHTML = `<button class="btn exit" id="vExit">✕ 退出演示</button><span class="gap"></span>
+      <button class="btn vst" data-nav="prev" ${v.idx ? "" : "disabled"}>◀</button><span class="pos" style="flex:none"><b>${v.idx}/${v.line.length}</b>演示</span><button class="btn vst primary" data-nav="next" ${v.idx < v.line.length ? "" : "disabled"}>▶</button>`;
+    $("#vExit").onclick = () => { RVS.vari = null; renderReview(false); };
+  } else {
+    const p = RVS.ply, sub = RVS.filter ? "筛选跳转" : p ? `第 ${Math.ceil(p / 2)} 回合` : "开局";
+    bar.innerHTML = `<button class="btn ed" data-nav="first" title="开局" ${p ? "" : "disabled"}>⏮</button><button class="btn st" data-nav="prev" ${p ? "" : "disabled"}>◀ 上一步</button>
+      <span class="pos"><b>${p}/${n}</b>${sub}</span>
+      <button class="btn st primary" data-nav="next" ${p < n ? "" : "disabled"}>下一步 ▶</button><button class="btn ed" data-nav="last" title="终局" ${p < n ? "" : "disabled"}>⏭</button>`;
+  }
+  bar.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => navReview(b.dataset.nav));
+}
 function scrollMoveList() {
   const box = $("#rvMoves"), cur = box && box.querySelector(".cur");
   if (!cur) return;
-  if (box.scrollWidth > box.clientWidth + 2) box.scrollLeft = cur.offsetLeft - box.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2;
-  if (box.scrollHeight > box.clientHeight + 2) box.scrollTop = cur.offsetTop - box.offsetTop - (box.clientHeight - cur.offsetHeight) / 2;
+  const b = box.getBoundingClientRect(), c = cur.getBoundingClientRect();
+  if (box.scrollWidth > box.clientWidth + 2) box.scrollLeft += (c.left + c.width / 2) - (b.left + b.width / 2);
+  if (box.scrollHeight > box.clientHeight + 2) box.scrollTop += (c.top + c.height / 2) - (b.top + b.height / 2);
 }
 function renderCard(names) {
   const rec = RVS.rec, card = $("#rvCard"), i = RVS.ply - 1;
   if (RVS.tryMode) {
     const t = RVS.tryMode;
     card.innerHTML = `<div class="card"><h3>🎯 试一试：第 ${Math.floor(i / 2) + 1} 回合 ${SIDE_NAME[i % 2]}走</h3>
-      <div class="explain">${t.msg || "棋盘已回到这步之前的局面。请找出最佳走法（在棋盘上直接走子）。"}</div>
-      <div class="row"><button class="btn sm" id="tAns">看答案</button><button class="btn sm" id="tExit">退出练习</button></div></div>`;
-    $("#tAns").onclick = () => { const a = rec.analysis.plies[i]; RVS.tryMode = null; startVari("best"); toast("答案：" + namesOf([a.best], rec.moves.slice(0, i))[0]); };
-    $("#tExit").onclick = () => { RVS.tryMode = null; sel = -1; targets = []; renderReview(false); };
+      <div class="explain">${t.msg || "棋盘已回到这步之前的局面。请找出最佳走法（在棋盘上直接走子）。"}</div></div>`;
     return;
   }
   if (RVS.vari) {
     const v = RVS.vari, ln = namesOf(v.line, rec.moves.slice(0, v.base)), k = v.idx;
     let desc;
-    if (k === 0) desc = `棋盘回到第 ${Math.floor(v.base / 2) + 1} 回合${SIDE_NAME[v.base % 2]}走棋之前。点 <b>▶</b> 走一步，<b>◀</b> 退一步；虚线箭头是下一步。`;
+    if (k === 0) desc = `棋盘回到第 ${Math.floor(v.base / 2) + 1} 回合${SIDE_NAME[v.base % 2]}走棋之前。点下方 <b>▶</b> 走一步，<b>◀</b> 退一步；虚线箭头是下一步。`;
     else {
       const sd = (v.base + k - 1) % 2;
       desc = `第 ${k} 步：${SIDE_NAME[sd]} <b>${ln[k - 1]}</b>` + (v.caps[k - 1] ? `，吃掉${sd ? "红方" : "黑方"}的<b>${PNAME[v.caps[k - 1]]}</b>` : "") + "。";
@@ -1852,12 +1922,10 @@ function renderCard(names) {
       if (k === ln.length) desc += `<br>演示结束${v.final ? "，局面评估：<b>" + v.final + "</b>" : ""}。`;
       else desc += ` 下一步：${SIDE_NAME[(sd + 1) % 2]}走（虚线箭头）。`;
     }
-    card.innerHTML = `<div class="card"><div class="row"><h3 style="margin:0">${v.label}</h3><span class="muted">${k}/${ln.length}</span><span class="sp"></span><button class="btn sm" id="vExit">退出演示</button></div>
-      <div class="explain">${desc}</div></div>`;
-    $("#vExit").onclick = () => { RVS.vari = null; renderReview(false); };
+    card.innerHTML = `<div class="card"><h3 style="margin:0">${v.label}</h3><div class="explain">${desc}</div></div>`;
     return;
   }
-  if (i < 0) { card.innerHTML = `<div class="card"><div class="muted">${recMeta(rec)}</div><div class="explain">开局局面。点 ▶ 或上方着法逐步查看，彩色圆点为每步评级；点「问题步」等标签可只看对应着法，此时 ◀ ▶ 会在这些着法间跳转。</div></div>`; return; }
+  if (i < 0) { card.innerHTML = `<div class="card"><div class="muted">${recMeta(rec)}</div><div class="explain">开局局面。点「下一步」、着法或在棋盘上左右滑动逐步查看，彩色圆点为每步评级；点「问题步」等标签可只看对应着法，此时上一步/下一步会在这些着法间跳转。</div></div>`; return; }
   const g = evalMove(rec, i), a = rec.analysis && rec.analysis.plies[i];
   const who = SIDE_NAME[i % 2], isMine = rec.mode !== "ai" || i % 2 === rec.human;
   let h = `<div class="card"><div class="row"><h3 style="margin:0">第 ${Math.floor(i / 2) + 1} 回合 · ${who} ${names[i]}</h3><span class="sp"></span>`;
@@ -1874,7 +1942,7 @@ function renderCard(names) {
   } else if (!isMine) {
     const nx = rec.analysis && rec.analysis.plies[i + 1];
     h += `<div class="muted" style="margin-top:4px">电脑的走法${nx ? " · 走后评估：" + scoreText(nx.bestScore, (i + 1) % 2) : ""}</div>`;
-    if (nx) h += `<div class="explain">对此最好的应着是 <b>${namesOf([nx.best], rec.moves.slice(0, i + 1))[0]}</b>，点 ▶ 查看你的实际应着评分。</div>`;
+    if (nx) h += `<div class="explain">对此最好的应着是 <b>${namesOf([nx.best], rec.moves.slice(0, i + 1))[0]}</b>，点「下一步」查看你的实际应着评分。</div>`;
   } else h += `<div class="muted thinking" style="margin-top:6px">等待分析</div>`;
   h += `</div>`;
   card.innerHTML = h;
@@ -1975,8 +2043,6 @@ function setReviewView() {
   view.check = RV.inCheck(RV.side()) ? kingSq(RV.board(), RV.side()) : -1;
   renderCaps(view.bd, view.flip, RV.side(), sideLabel(rec.mode, rec.human, rec.level));
   drawBoard();
-  const st = $("#status"); st.className = ""; st.style.color = "";
-  st.textContent = RVS.tryMode ? "练习模式" : RVS.vari ? RVS.vari.label : `复盘 ${RVS.ply}/${rec.moves.length}`;
 }
 function drawEvalGraph() {
   const c = $("#evalGraph"); if (!c || !RVS) return;
@@ -2158,7 +2224,8 @@ function renderSettings() {
       <div class="set-row"><div><div>恢复数据</div><div class="muted">从备份文件导入（与现有记录合并）</div></div><button class="btn sm" id="bImp">导入</button><input type="file" id="fImp" accept=".json,application/json" style="display:none"></div>
       <div class="set-row"><div><div>清空历史记录</div><div class="muted">共 ${records.length} 局</div></div><button class="btn sm" id="bClr">清空</button></div>
     </div>
-    <div class="card muted" style="line-height:1.6">本游戏完全离线运行，AI 与复盘分析全部使用本机算力，数据只保存在本设备浏览器中。<br>iPhone 用户建议通过 Safari「分享 → 添加到主屏幕」以全屏方式使用，并定期导出备份。</div>`;
+    <div class="card muted" style="line-height:1.6">本游戏完全离线运行，AI 与复盘分析全部使用本机算力，数据只保存在本设备浏览器中。<br>iPhone 用户建议通过 Safari「分享 → 添加到主屏幕」以全屏方式使用，并定期导出备份。
+      <div style="font-size:11px;opacity:.7;margin-top:4px">v4 · 窗口 ${innerWidth}×${innerHeight} · 屏幕 ${screen.width}×${screen.height} · 布局 ${$("#app").clientHeight}${document.documentElement.classList.contains("fixH") ? "（已修正）" : ""}${navigator.standalone ? " · 主屏幕模式" : ""}</div></div>`;
   pg.querySelectorAll("[data-skin]").forEach(d => {
     const c = d.querySelector("canvas"), g = c.getContext("2d"), sk = SKINS[d.dataset.skin];
     // 预览：真实棋盘局部（含河界）+ 红黑各一子
@@ -2213,24 +2280,40 @@ function switchTab(t) {
   else if (t === "review") renderReview(true);
   else {
     if (t === "history") renderHistory(); else if (t === "stats") renderStats(); else renderSettings();
-    const s = $("#status"); s.className = ""; s.style.color = ""; s.textContent = { history: "历史对局", stats: "数据分析", settings: "设置" }[t];
     if (wide() && G) refreshPlay();
   }
   layout();
 }
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+// iOS 主屏幕模式（standalone）下，部分系统版本的视口比屏幕矮一个状态栏高度，底部露出白条；此时按屏幕尺寸撑满
+function fixViewport() {
+  const root = document.documentElement;
+  const standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+  let H = 0;
+  if (standalone && screen.width && screen.height) {
+    const portrait = window.innerHeight >= window.innerWidth;
+    const sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    const sw = portrait ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+    const gap = sh - window.innerHeight;
+    if (Math.abs(sw - window.innerWidth) < 2 && gap > 1 && gap <= 100) H = sh; // 只修正「宽度一致、高度差一个状态栏」的情况
+  }
+  root.classList.toggle("fixH", !!H);
+  if (H) root.style.setProperty("--appH", H + "px");
+}
+let lastWide = null;
 function layout() {
-  const vw = window.innerWidth, vh = window.innerHeight;
+  fixViewport();
+  const vw = window.innerWidth, vh = $("#app").clientHeight || window.innerHeight;
   dpr = Math.min(3, window.devicePixelRatio || 1);
   let w;
   if (wide()) {
     const bw = $("#boardWrap"), bars = $("#capTop").offsetHeight + $("#capBot").offsetHeight;
     w = Math.min(bw.clientWidth || (vw - 440), ((bw.clientHeight || (vh - 70)) - bars) * 10 / 11);
   } else {
-    const top = $("#topbar").offsetHeight + (parseFloat(getComputedStyle($("#app")).paddingTop) || 0);
+    const top = (parseFloat(getComputedStyle($("#app")).paddingTop) || 0) + (parseFloat(getComputedStyle($("#main")).paddingTop) || 0);
     const tabs = $("#tabs").offsetHeight;
     const bars = $("#capTop").offsetHeight + $("#capBot").offsetHeight;
-    const minPanel = curTab === "review" ? (vh >= 780 ? 245 : 205) : 150;
+    const minPanel = curTab === "review" ? (vh >= 780 ? 320 : vh >= 700 ? 270 : 246) : 170;
     w = Math.min(vw - (parseFloat(getComputedStyle($("#app")).paddingLeft) || 0) * 2, (vh - top - tabs - bars - minPanel) * 10 / 11);
   }
   cell = Math.max(24, Math.floor(w / 10));
@@ -2238,7 +2321,10 @@ function layout() {
   $("#capTop").style.width = $("#capBot").style.width = cell * 10 + "px";
   cv.width = cell * 10 * dpr; cv.height = cell * 11 * dpr;
   bgCache = null; drawBoard();
-  if (curTab === "review") drawEvalGraph();
+  const wd = wide();
+  if (curTab === "review" && RVS && lastWide !== null && wd !== lastWide) renderReview(true); // 横竖屏切换：着法列表换排版
+  else if (curTab === "review") { drawEvalGraph(); scrollMoveList(); }
+  lastWide = wd;
 }
 window.addEventListener("resize", () => { clearTimeout(layout.t); layout.t = setTimeout(layout, 80); });
 window.addEventListener("orientationchange", () => setTimeout(layout, 300));
