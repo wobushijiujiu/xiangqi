@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="象棋">
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#2b1a0e">
@@ -19,7 +19,7 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
-html { background: #2b1a0e; }
+html { background: var(--card, #fffaf0); }
 body {
   background: linear-gradient(160deg, var(--bg2), var(--bg)); color: var(--text);
   font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -28,8 +28,16 @@ body {
 button, select, input { font: inherit; }
 #app { position: fixed; inset: 0; display: flex; flex-direction: column;
   padding: var(--safe-t) var(--safe-r) 0 var(--safe-l); }
-/* 主屏幕（standalone）模式下 iOS 视口可能比屏幕短一截，由 JS 设置 --appH 修正 */
-html.fixH #app { bottom: auto; height: var(--appH); }
+/* 手机横屏：提示竖屏使用 */
+#rotate { display: none; }
+@media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
+  #app, #modal, #toast { display: none !important; }
+  #rotate { display: flex; position: fixed; inset: 0; z-index: 99; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: linear-gradient(160deg, var(--bg2), var(--bg)); color: var(--topText); font-size: 17px; }
+  #rotate .ph { width: 46px; height: 76px; border: 4px solid currentColor; border-radius: 10px; position: relative; animation: rot 2.4s ease-in-out infinite; }
+  #rotate .ph::after { content: ""; position: absolute; left: 50%; bottom: 5px; width: 12px; height: 3px; margin-left: -6px; border-radius: 2px; background: currentColor; }
+}
+@keyframes rot { 0%, 25% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0); } }
 .gRow { flex: none; display: flex; align-items: center; gap: 8px; min-height: 26px; margin-bottom: 4px; }
 #gInfo { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #status { flex: none; font-size: 15px; font-weight: 600; text-align: right; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -81,13 +89,12 @@ html.fixH #app { bottom: auto; height: var(--appH); }
 /* 复盘底部操作栏：大按钮；演示时「退出」在最左、◀ ▶ 在右侧，拉开距离防误触 */
 #rvBar { display: flex; align-items: center; gap: 6px; padding-top: 8px; }
 #rvBar .btn { height: 44px; padding: 0 6px; font-size: 15px; white-space: nowrap; }
-#rvBar .ed { flex: none; width: 46px; font-size: 14px; }
-#rvBar .st { flex: 1.3; }
-#rvBar .pos { flex: 1; min-width: 56px; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.25; white-space: nowrap; }
+#rvBar .st { flex: 1; }
+#rvBar .pos { flex: none; min-width: 84px; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.25; white-space: nowrap; }
 #rvBar .pos b { display: block; color: var(--text); font-size: 15px; }
-#rvBar .exit { flex: none; padding: 0 12px; background: var(--card); color: var(--accent); border-color: var(--accent); }
+#rvBar .exit { flex: none; padding: 0 10px; background: var(--card); color: var(--accent); border-color: var(--accent); }
 #rvBar .gap { flex: 1; min-width: 12px; }
-#rvBar .vst { flex: none; width: 76px; }
+#rvBar .vst { flex: none; width: 64px; }
 #tabs { flex: none; display: flex; border-top: 1px solid var(--line); background: var(--card); padding-bottom: max(2px, calc(var(--safe-b) - 20px)); order: 2; }
 #tabs button { flex: 1; border: 0; background: none; padding: 6px 0 4px; color: var(--muted); font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 #tabs button .ic { font-size: 19px; line-height: 1; font-family: "Kaiti SC", STKaiti, KaiTi, serif; font-weight: bold; }
@@ -95,7 +102,7 @@ html.fixH #app { bottom: auto; height: var(--appH); }
 body.noboard #boardWrap { display: none; }
 body.noboard #panel { border-radius: 0; }
 
-@media (min-width: 820px) and (min-aspect-ratio: 1/1) {
+@media (min-width: 820px) and (min-height: 541px) and (min-aspect-ratio: 1/1) {
   #main { flex-direction: row; padding: 12px 12px 12px; gap: 14px; }
   #boardWrap { flex: 1; justify-content: center; align-items: center; }
   body.noboard #boardWrap { display: flex; }
@@ -141,7 +148,7 @@ h3 { margin: 4px 0 8px; font-size: 16px; }
 .capRow .r { color: #b8231a; } .capRow .b { color: #222; }
 .navbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 8px; }
 .navbar .btn { padding: 7px 0; font-size: 16px; }
-#evalGraph { width: 100%; height: 44px; cursor: pointer; display: block; border-radius: 8px; background: var(--card); border: 1px solid var(--line); }
+#evalGraph { width: 100%; height: 44px; cursor: pointer; touch-action: none; display: block; border-radius: 8px; background: var(--card); border: 1px solid var(--line); }
 .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 6px 0; }
 .progress > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
 .explain { line-height: 1.6; font-size: 14px; margin: 6px 0; }
@@ -223,6 +230,7 @@ table.st th { color: var(--muted); font-weight: normal; }
 </div>
 <div id="modal" class="hidden"><div class="box" id="modalBox"></div></div>
 <div id="toast"></div>
+<div id="rotate"><div class="ph"></div><div>请竖屏使用</div></div>
 
 <script id="engine-src">
 /* ================= 象棋引擎（可在主线程或 Web Worker 中运行） ================= */
@@ -1813,11 +1821,16 @@ function renderReview(full) {
       <div class="mstrip" id="rvMoves"></div>
       <div id="rvCard"></div>
       <div id="rvBar"></div>`;
-    $("#evalGraph").onclick = e => {
-      const r = e.target.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width;
-      RVS.vari = null; RVS.tryMode = null; sel = -1; targets = [];
-      RVS.ply = Math.max(0, Math.min(n, Math.round(x * n))); renderReview(false);
+    // 曲线图：点击或按住左右拖动，快速定位到任意一步
+    const eg = $("#evalGraph");
+    const seek = e => {
+      const r = eg.getBoundingClientRect(), p = Math.max(0, Math.min(n, Math.round((e.clientX - r.left) / r.width * n)));
+      if (p === RVS.ply && !RVS.vari && !RVS.tryMode) return;
+      RVS.vari = null; RVS.tryMode = null; sel = -1; targets = []; RVS.ply = p; renderReview(false);
     };
+    eg.onpointerdown = e => { e.preventDefault(); eg.setPointerCapture(e.pointerId); eg._drag = true; seek(e); };
+    eg.onpointermove = e => { if (eg._drag) seek(e); };
+    eg.onpointerup = eg.onpointercancel = () => { eg._drag = false; };
   }
   // 头部：准确率 + 评级筛选（同一行，可横向滑动）
   const me = rec.human;
@@ -1885,14 +1898,14 @@ function renderBar() { // 复盘底部操作栏
   }
   if (RVS.vari) {
     const v = RVS.vari;
-    bar.innerHTML = `<button class="btn exit" id="vExit">✕ 退出演示</button><span class="gap"></span>
-      <button class="btn vst" data-nav="prev" ${v.idx ? "" : "disabled"}>◀</button><span class="pos" style="flex:none"><b>${v.idx}/${v.line.length}</b>演示</span><button class="btn vst primary" data-nav="next" ${v.idx < v.line.length ? "" : "disabled"}>▶</button>`;
+    bar.innerHTML = `<button class="btn vst" data-nav="prev" ${v.idx ? "" : "disabled"}>◀</button><span class="pos" style="min-width:58px"><b>${v.idx}/${v.line.length}</b>演示</span><button class="btn vst primary" data-nav="next" ${v.idx < v.line.length ? "" : "disabled"}>▶</button>
+      <span class="gap"></span><button class="btn exit" id="vExit">✕ 退出演示</button>`;
     $("#vExit").onclick = () => { RVS.vari = null; renderReview(false); };
   } else {
     const p = RVS.ply, sub = RVS.filter ? "筛选跳转" : p ? `第 ${Math.ceil(p / 2)} 回合` : "开局";
-    bar.innerHTML = `<button class="btn ed" data-nav="first" title="开局" ${p ? "" : "disabled"}>⏮</button><button class="btn st" data-nav="prev" ${p ? "" : "disabled"}>◀ 上一步</button>
+    bar.innerHTML = `<button class="btn st" data-nav="prev" ${p ? "" : "disabled"}>◀ 上一步</button>
       <span class="pos"><b>${p}/${n}</b>${sub}</span>
-      <button class="btn st primary" data-nav="next" ${p < n ? "" : "disabled"}>下一步 ▶</button><button class="btn ed" data-nav="last" title="终局" ${p < n ? "" : "disabled"}>⏭</button>`;
+      <button class="btn st primary" data-nav="next" ${p < n ? "" : "disabled"}>下一步 ▶</button>`;
   }
   bar.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => navReview(b.dataset.nav));
 }
@@ -2225,7 +2238,7 @@ function renderSettings() {
       <div class="set-row"><div><div>清空历史记录</div><div class="muted">共 ${records.length} 局</div></div><button class="btn sm" id="bClr">清空</button></div>
     </div>
     <div class="card muted" style="line-height:1.6">本游戏完全离线运行，AI 与复盘分析全部使用本机算力，数据只保存在本设备浏览器中。<br>iPhone 用户建议通过 Safari「分享 → 添加到主屏幕」以全屏方式使用，并定期导出备份。
-      <div style="font-size:11px;opacity:.7;margin-top:4px">v4 · 窗口 ${innerWidth}×${innerHeight} · 屏幕 ${screen.width}×${screen.height} · 布局 ${$("#app").clientHeight}${document.documentElement.classList.contains("fixH") ? "（已修正）" : ""}${navigator.standalone ? " · 主屏幕模式" : ""}</div></div>`;
+      <div style="font-size:11px;opacity:.7;margin-top:4px"> v5 · 窗口 ${innerWidth}×${innerHeight} · 屏幕 ${screen.width}×${screen.height} · 布局 ${$("#app").clientHeight}${navigator.standalone ? " · 主屏幕模式" : ""}</div></div>`;
   pg.querySelectorAll("[data-skin]").forEach(d => {
     const c = d.querySelector("canvas"), g = c.getContext("2d"), sk = SKINS[d.dataset.skin];
     // 预览：真实棋盘局部（含河界）+ 红黑各一子
@@ -2266,7 +2279,7 @@ function renderSettings() {
 
 /* ======================= 布局与标签页 ======================= */
 let curTab = "play";
-const wide = () => window.matchMedia("(min-width: 820px) and (min-aspect-ratio: 1/1)").matches;
+const wide = () => window.matchMedia("(min-width: 820px) and (min-height: 541px) and (min-aspect-ratio: 1/1)").matches;
 function switchTab(t) {
   if (curTab === "review" && t !== "review") stopAuto();
   curTab = t;
@@ -2285,24 +2298,8 @@ function switchTab(t) {
   layout();
 }
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
-// iOS 主屏幕模式（standalone）下，部分系统版本的视口比屏幕矮一个状态栏高度，底部露出白条；此时按屏幕尺寸撑满
-function fixViewport() {
-  const root = document.documentElement;
-  const standalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-  let H = 0;
-  if (standalone && screen.width && screen.height) {
-    const portrait = window.innerHeight >= window.innerWidth;
-    const sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-    const sw = portrait ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
-    const gap = sh - window.innerHeight;
-    if (Math.abs(sw - window.innerWidth) < 2 && gap > 1 && gap <= 100) H = sh; // 只修正「宽度一致、高度差一个状态栏」的情况
-  }
-  root.classList.toggle("fixH", !!H);
-  if (H) root.style.setProperty("--appH", H + "px");
-}
 let lastWide = null;
 function layout() {
-  fixViewport();
   const vw = window.innerWidth, vh = $("#app").clientHeight || window.innerHeight;
   dpr = Math.min(3, window.devicePixelRatio || 1);
   let w;
@@ -2352,7 +2349,7 @@ $("#bResign").onclick = resign;
   const link = document.createElement("link"); link.rel = "apple-touch-icon"; link.href = c.toDataURL("image/png"); document.head.appendChild(link);
   if (/^https?:$/.test(location.protocol)) {
     const m = document.createElement("link"); m.rel = "manifest"; m.href = "manifest.webmanifest"; document.head.appendChild(m);
-    link.href = "icon-192.png";
+    link.href = "icon-180.png";
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
   }
 })();
