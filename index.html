@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="象棋">
 <meta name="format-detection" content="telephone=no">
 <meta name="theme-color" content="#2b1a0e">
@@ -811,7 +811,7 @@ const PNAME = ["", "帅", "仕", "相", "马", "车", "炮", "兵", "", "将", "
 const TNAME = ["", "帥", "仕", "相", "馬", "俥", "炮", "兵", "", "將", "士", "象", "馬", "車", "砲", "卒"]; // 青花瓷皮肤用繁体隶书
 const PTYPE = ["", "帅/将", "仕/士", "相/象", "马", "车", "炮", "兵/卒"];
 const SIDE_NAME = ["红方", "黑方"];
-const APP_VER = "v7";
+const APP_VER = "v8";
 
 /* ======================= 记谱 ======================= */
 const CN = "一二三四五六七八九", AR = "123456789";
@@ -865,13 +865,20 @@ const SKINS = {
   jade: { name: "翡翠金玉", css: { bg: "#0d2a1c", bg2: "#1d4a33", panel: "#f1f7f2", card: "#fbfefb", text: "#173c28", muted: "#5d8a70", accent: "#b8862b", btn: "#dcebdf", btnText: "#173c28", line: "#cfe2d4", topText: "#f3e3b5" },
     b: { a: "#cfe9d6", b: "#8cc39e", line: "#1f5134", river: "#1f5134", pa: "#effaf2", pb: "#9fd3b0", edge: "#b8862b", red: "#b22222", black: "#0f3a24", tex: "jade", glow: 0, coord: "#2b6a47" } }
 };
+// 状态栏颜色：iOS 主屏幕模式只在启动/切回时读取 theme-color，换一个新的 meta 元素促使它立即重新读取
+function setThemeColor(c) {
+  const old = document.querySelector('meta[name="theme-color"]');
+  if (old && old.content === c && setThemeColor.done) return;
+  const m = document.createElement("meta"); m.name = "theme-color"; m.content = c;
+  if (old) old.remove(); document.head.appendChild(m); setThemeColor.done = 1;
+}
 function applySkin() {
   const sk = SKINS[settings.skin] || SKINS.wood;
   for (const k in sk.css) document.documentElement.style.setProperty("--" + k, sk.css[k]);
   for (const [k, v] of [["pa", sk.b.pa], ["pb", sk.b.pb], ["pedge", sk.b.edge], ["pred", sk.b.red], ["pblack", sk.b.black]]) document.documentElement.style.setProperty("--" + k, v);
   const notch = sk.notch || sk.css.bg2;
   document.documentElement.style.setProperty("--notch", sk.notch || "transparent");
-  document.querySelector('meta[name="theme-color"]').content = notch;
+  setThemeColor(notch);
   bgCache = null; sprCache = null; drawBoard();
 }
 
@@ -1329,15 +1336,33 @@ const MOVE_SOUND_DELAY = () => settings.anim ? .2 : 0; // 声音与落子瞬间�
 
 /* ======================= 音效（WebAudio 实时合成，不需要音频文件） ======================= */
 let actx = null, master = null, verb = null, noiseBuf = null;
+// iOS 切到别的应用再回来，音频会被置为 interrupted/suspended，有时 resume 后仍无声。
+// 因此切回后的第一次触摸直接重建音频环境（必须在触摸事件里创建才允许出声）。
+let audioStale = false;
+function newAudio() {
+  try { if (actx && actx.state !== "closed") actx.close(); } catch (e) {}
+  actx = new (window.AudioContext || window.webkitAudioContext)(); master = null;
+  setupAudio();
+}
 function unlockAudio() {
   try {
-    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-    if (actx.state === "suspended") actx.resume();
-    if (!master) setupAudio();
+    if (!actx || actx.state === "closed" || audioStale) { audioStale = false; newAudio(); }
+    if (actx.state !== "running") { const p = actx.resume(); if (p && p.catch) p.catch(() => {}); }
+    if (!unlockAudio.kick || unlockAudio.kick !== actx) { // iOS：播放一段静音，真正解锁输出
+      const b = actx.createBuffer(1, 1, 22050), s = actx.createBufferSource(); s.buffer = b; s.connect(actx.destination); s.start(0);
+      unlockAudio.kick = actx;
+    }
   } catch (e) {}
 }
 document.addEventListener("touchstart", unlockAudio, { passive: true });
+document.addEventListener("touchend", unlockAudio, { passive: true });
 document.addEventListener("pointerdown", unlockAudio);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { audioStale = true; return; }
+  if (actx && actx.state !== "running") { const p = actx.resume(); if (p && p.catch) p.catch(() => {}); }
+  setThemeColor.done = 0; applySkin && setThemeColor(document.querySelector('meta[name="theme-color"]').content);
+});
+window.addEventListener("pageshow", e => { if (e.persisted) audioStale = true; });
 function setupAudio() {
   master = actx.createDynamicsCompressor();
   master.threshold.value = -16; master.knee.value = 12; master.ratio.value = 4; master.attack.value = .003; master.release.value = .2;
@@ -1420,6 +1445,7 @@ const SOUNDS = {
 };
 function sound(type, delay) {
   if (!settings.sound || !actx) return;
+  if (actx.state !== "running") { try { const p = actx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
   try {
     if (!master) setupAudio();
     const set = SOUNDS[curSkin().b.tex] || SOUNDS.wood, f = set[type] || set.move;
