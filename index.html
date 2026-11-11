@@ -27,7 +27,7 @@
 html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
 html { background: var(--card, #fffaf0); }
 body {
-  background: linear-gradient(160deg, var(--bg2), var(--bg)); color: var(--text);
+  background: var(--bg2) linear-gradient(180deg, var(--bg2), var(--bg)); color: var(--text);
   font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
 }
@@ -138,7 +138,7 @@ body.noboard #main { padding-top: 0; }
   #main { flex-direction: row; padding: 12px 12px 12px; gap: 14px; }
   #boardWrap { flex: 1; justify-content: center; align-items: center; }
   body.noboard #boardWrap { display: flex; }
-  #panel { flex: none; width: 400px; border-radius: 14px; }
+  #panel, body.noboard #panel { flex: none; width: 400px; border-radius: 14px; }
   #tabs { order: 0; border-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 0; }
   .rvMeta { display: block; }
   .rvAcc { flex-wrap: wrap; row-gap: 6px; }
@@ -835,7 +835,7 @@ const PNAME = ["", "帅", "仕", "相", "马", "车", "炮", "兵", "", "将", "
 const TNAME = ["", "帥", "仕", "相", "馬", "俥", "炮", "兵", "", "將", "士", "象", "馬", "車", "砲", "卒"]; // 青花瓷皮肤用繁体隶书
 const PTYPE = ["", "帅/将", "仕/士", "相/象", "马", "车", "炮", "兵/卒"];
 const SIDE_NAME = ["红方", "黑方"];
-const APP_VER = "v9";
+const APP_VER = "v10";
 
 /* ======================= 记谱 ======================= */
 const CN = "一二三四五六七八九", AR = "123456789";
@@ -1035,15 +1035,15 @@ function renderBg(sk, W, H, c, flip, sc) {
   } else if (st === "porcelain") {
     const rg = g.createRadialGradient(W / 2, H / 2, c, W / 2, H / 2, W * .8); rg.addColorStop(0, "rgba(255,255,255,.7)"); rg.addColorStop(1, "rgba(160,190,225,.35)");
     g.fillStyle = rg; g.fillRect(0, 0, W, H);
-    g.strokeStyle = "rgba(31,78,140,.9)"; g.lineWidth = Math.max(1, c * .04); g.strokeRect(c * .1, c * .1, W - c * .2, H - c * .2);
-    g.lineWidth = Math.max(1, c * .02); g.strokeRect(c * .17, c * .17, W - c * .34, H - c * .34);
+    g.strokeStyle = "rgba(31,78,140,.9)"; g.lineWidth = Math.max(1, c * .04); g.strokeRect(c * .03, c * .03, W - c * .06, H - c * .06); // 双边框贴近外缘，避开坐标文字
+    g.lineWidth = Math.max(1, c * .02); g.strokeRect(c * .085, c * .085, W - c * .17, H - c * .17);
     const curl = (x, y, sx, sy) => { // 角花：卷云纹
       g.save(); g.translate(x, y); g.scale(sx, sy); g.strokeStyle = "rgba(31,78,140,.75)"; g.lineWidth = Math.max(1, c * .035);
       g.beginPath(); g.arc(c * .5, c * .5, c * .22, Math.PI, Math.PI * 2.6); g.stroke();
       g.beginPath(); g.arc(c * .5, c * .5, c * .1, Math.PI, Math.PI * 2.4); g.stroke();
       g.beginPath(); g.moveTo(c * .28, c * .5); g.quadraticCurveTo(c * .28, c * .28, c * .55, c * .26); g.stroke(); g.restore();
     };
-    curl(c * .1, c * .1, 1, 1); curl(W - c * .1, c * .1, -1, 1); curl(c * .1, H - c * .1, 1, -1); curl(W - c * .1, H - c * .1, -1, -1);
+    curl(c * .03, c * .03, 1, 1); curl(W - c * .03, c * .03, -1, 1); curl(c * .03, H - c * .03, 1, -1); curl(W - c * .03, H - c * .03, -1, -1);
     // 河界水波纹
     g.strokeStyle = "rgba(31,78,140,.13)"; g.lineWidth = Math.max(1, c * .03);
     for (let row = 0; row < 3; row++) { const yy = Y(4) + c * (.25 + row * .25); g.beginPath(); for (let x = X(0); x <= X(8); x += c * .25) g.arc(x + c * .125, yy, c * .125, Math.PI, 0); g.stroke(); }
