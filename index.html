@@ -835,7 +835,7 @@ const PNAME = ["", "帅", "仕", "相", "马", "车", "炮", "兵", "", "将", "
 const TNAME = ["", "帥", "仕", "相", "馬", "俥", "炮", "兵", "", "將", "士", "象", "馬", "車", "砲", "卒"]; // 青花瓷皮肤用繁体隶书
 const PTYPE = ["", "帅/将", "仕/士", "相/象", "马", "车", "炮", "兵/卒"];
 const SIDE_NAME = ["红方", "黑方"];
-const APP_VER = "v12";
+const APP_VER = "v13";
 
 /* ======================= 记谱 ======================= */
 const CN = "一二三四五六七八九", AR = "123456789";
@@ -880,7 +880,7 @@ const crossed = (p, sq) => (p >> 3) === 0 ? ((sq / 9) | 0) <= 4 : ((sq / 9) | 0)
 const SKINS = {
   wood: { name: "经典木纹", css: { bg: "#2b1a0e", bg2: "#5a3b22", panel: "#fbf3e2", card: "#fffaf0", text: "#3b2412", muted: "#8a6a4a", accent: "#b8231a", btn: "#f1dfb8", btnText: "#3b2412", line: "#e3cfa8", topText: "#f5e6c8" },
     b: { a: "#f0cf94", b: "#d6a560", line: "#5b3a1a", river: "#6b4520", pa: "#fff3d6", pb: "#e0b474", edge: "#8a5a2b", red: "#b8231a", black: "#1e1e1e", tex: "wood", glow: 0, coord: "#7a5530" } },
-  ink: { name: "水墨丹青", notch: "#33302b", css: { bg: "#d9d4c7", bg2: "#efebe2", panel: "#f7f5ef", card: "#fffefb", text: "#222", muted: "#777", accent: "#a61b1b", btn: "#e9e5da", btnText: "#222", line: "#ddd8cb", topText: "#222" },
+  ink: { name: "水墨丹青", light: true, css: { bg: "#d9d4c7", bg2: "#efebe2", panel: "#f7f5ef", card: "#fffefb", text: "#222", muted: "#777", accent: "#a61b1b", btn: "#e9e5da", btnText: "#222", line: "#ddd8cb", topText: "#222" },
     b: { a: "#f6f3ea", b: "#e3ddcd", line: "#2b2b2b", river: "#2b2b2b", pa: "#fdfcf7", pb: "#d9d3c3", edge: "#444", red: "#a61b1b", black: "#111", tex: "ink", glow: 0, coord: "#555" } },
   porcelain: { name: "青花瓷韵", css: { bg: "#0b2447", bg2: "#19376d", panel: "#f3f7fc", card: "#ffffff", text: "#13315c", muted: "#5a7aa5", accent: "#1f4e8c", btn: "#dde8f6", btnText: "#13315c", line: "#d3e0f0", topText: "#e8f0fb" },
     b: { a: "#fbfdff", b: "#dbe7f5", line: "#1f4e8c", river: "#1f4e8c", pa: "#ffffff", pb: "#cfdff2", edge: "#1f4e8c", red: "#c0392b", black: "#163a6b", tex: "porcelain", glow: 0, coord: "#3b679e" } },
@@ -906,7 +906,7 @@ function applySkin() {
   const lightTop = !!sk.notch, ds = document.documentElement.style;
   ds.setProperty("--topFade", lightTop ? "rgba(51,48,43,0)" : notch);
   ds.setProperty("--topH", lightTop ? "6px" : "3px");
-  ds.setProperty("--panelShadow", lightTop ? "0 0 0 1px rgba(0,0,0,.13), 0 -2px 10px rgba(0,0,0,.10)" : "none");
+  ds.setProperty("--panelShadow", sk.light ? "0 0 0 1px rgba(0,0,0,.13), 0 -2px 10px rgba(0,0,0,.10)" : "none");
   // 换皮肤时重建顶部色条，促使 iOS 重新取色
   const old = $("#notch"); if (old) { const n = document.createElement("div"); n.id = "notch"; old.replaceWith(n); }
   setThemeColor(notch);
