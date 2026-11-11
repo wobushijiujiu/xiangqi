@@ -93,11 +93,31 @@ button, select, input { font: inherit; }
 .mi .x { color: #e74c3c; font-weight: bold; font-size: 12px; } .mi.cur .x { color: #ffe08a; }
 #rvCard { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 /* 说明卡片自身在区域内收缩并内部滚动，下边框始终可见 */
-#rvCard .card { margin-bottom: 0; flex: 0 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#rvCard .card { margin-bottom: 0; flex: 1 1 auto; min-height: 0; overflow: hidden; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; padding: 8px 12px; }
+#rvCard .card > * { flex: none; }
 #rvCard .card h3 { font-size: 15px; }
+/* 说明卡片统一结构：标题行（固定高度）→ 按钮行（试一试在最左）→ 讲解 → 走后评估（贴底） */
+#rvCard .chd { display: flex; align-items: center; gap: 8px; height: 24px; flex-wrap: nowrap; }
+#rvCard .chd h3 { margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#rvCard .chd .muted { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+#rvCard .trow { margin-top: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+#rvCard .explain { margin: 4px 0 0; }
+#rvCard .cft { margin-top: auto; padding-top: 6px; font-size: 12px; }
+/* 手机复盘页压紧各部分，把空间让给棋盘 */
+body.rv #pages.fix { padding-top: 6px; padding-bottom: 4px; }
+#pg-review .rvAcc { margin-bottom: 4px; }
+#pg-review .chip { padding: 4px 10px; }
+#pg-review .mstrip { margin: 4px 0; }
+#pg-review .mi { padding: 6px 10px; }
+#pg-review #evalGraph { height: 32px; margin-top: 0; }
+#rvCard .explain { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* 复盘时两方吃子合并成棋盘上方一行 */
+.capBar .half { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 2px; overflow: hidden; }
+.capBar .half.r { justify-content: flex-end; }
+#capBot.off { display: none; }
 /* 复盘底部操作栏：大按钮；演示时「退出」在最左、◀ ▶ 在右侧，拉开距离防误触 */
-#rvBar { display: flex; align-items: center; gap: 6px; padding-top: 6px; }
-#rvBar .btn { height: 44px; padding: 0 6px; font-size: 15px; white-space: nowrap; }
+#rvBar { display: flex; align-items: center; gap: 6px; padding-top: 4px; }
+#rvBar .btn { height: 42px; padding: 0 6px; font-size: 15px; white-space: nowrap; }
 #rvBar .st { flex: 1; }
 #rvBar .pos { flex: none; width: 84px; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.25; white-space: nowrap; }
 #rvBar .pos b { display: block; color: var(--text); font-size: 15px; }
@@ -123,7 +143,10 @@ body.noboard #main { padding-top: 0; }
   .rvMeta { display: block; }
   .rvAcc { flex-wrap: wrap; row-gap: 6px; }
   .chips { flex: 1 1 100%; flex-wrap: wrap; overflow: visible; }
-  #evalGraph { height: 80px !important; }
+  #evalGraph, #pg-review #evalGraph { height: 80px !important; }
+  body.rv #pages.fix { padding: 10px 12px 8px; }
+  #rvCard .card { overflow-y: auto; }
+  #rvCard .explain { flex: none; overflow: visible; }
   #rvMoves { flex: 1 1 0; min-height: 120px; margin: 8px 0 0; display: block; overflow-x: hidden; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
   .mgrid { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 3px 4px; align-items: center; }
   .mgrid .no { color: var(--muted); font-size: 12px; text-align: right; padding-right: 2px; }
@@ -133,6 +156,7 @@ body.noboard #main { padding-top: 0; }
   .mgrid .mi i { display: none; }
   .mgrid .full { grid-column: 1 / -1; }
   #rvCard { flex: none; max-height: 42%; margin-top: 8px; }
+  #rvCard .card { flex: 0 1 auto; }
   .playList { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
   body.noboard #main { padding-top: 12px; }
 }
@@ -811,7 +835,7 @@ const PNAME = ["", "帅", "仕", "相", "马", "车", "炮", "兵", "", "将", "
 const TNAME = ["", "帥", "仕", "相", "馬", "俥", "炮", "兵", "", "將", "士", "象", "馬", "車", "砲", "卒"]; // 青花瓷皮肤用繁体隶书
 const PTYPE = ["", "帅/将", "仕/士", "相/象", "马", "车", "炮", "兵/卒"];
 const SIDE_NAME = ["红方", "黑方"];
-const APP_VER = "v8";
+const APP_VER = "v9";
 
 /* ======================= 记谱 ======================= */
 const CN = "一二三四五六七八九", AR = "123456789";
@@ -1677,12 +1701,17 @@ function groupLost(lost) { // 同类棋子合并显示，右下角标数量，�
   return out;
 }
 // 棋盘上下的吃子栏：每一方旁边显示该方被吃掉的子
-function renderCaps(bd, flip, stm, label) {
-  for (const [id, side] of [["#capTop", flip ? 0 : 1], ["#capBot", flip ? 1 : 0]]) {
-    const lost = lostPieces(bd, side);
-    $(id).innerHTML = `<span class="who ${stm === side ? "on" : ""}">${label(side)}</span><span class="sp"></span>` +
-      (lost.length ? `<span class="lost">被吃</span>` + groupLost(lost).map(([p, k]) => `<span class="cpw"><i class="cp ${p >> 3 ? "b" : "r"}">${PNAME[p]}</i>${k > 1 ? `<b>${k}</b>` : ""}</span>`).join("") : "");
+function renderCaps(bd, flip, stm, label, merged) {
+  const pcs = side => { const lost = lostPieces(bd, side);
+    return lost.length ? `<span class="lost">被吃</span>` + groupLost(lost).map(([p, k]) => `<span class="cpw"><i class="cp ${p >> 3 ? "b" : "r"}">${PNAME[p]}</i>${k > 1 ? `<b>${k}</b>` : ""}</span>`).join("") : ""; };
+  const who = side => `<span class="who ${stm === side ? "on" : ""}">${label(side)}</span>`;
+  const top = flip ? 0 : 1, bot = 1 - top;
+  $("#capBot").classList.toggle("off", !!merged);
+  if (merged) { // 复盘（手机）：上方一行同时显示两方，省出一行给棋盘
+    $("#capTop").innerHTML = `<span class="half">${who(top)}${pcs(top)}</span><span class="half r">${pcs(bot)}${who(bot)}</span>`;
+    $("#capBot").innerHTML = ""; return;
   }
+  for (const [id, side] of [["#capTop", top], ["#capBot", bot]]) $(id).innerHTML = who(side) + `<span class="sp"></span>` + pcs(side);
 }
 const sideLabel = (mode, human, level) => s => mode === "ai" ? (s === human ? `我（${s ? "黑" : "红"}）` : `电脑 · ${level}级（${s ? "黑" : "红"}）`) : SIDE_NAME[s];
 function refreshPlay() {
@@ -2011,47 +2040,52 @@ function scrollMoveList() {
 }
 function renderCard(names) {
   const rec = RVS.rec, card = $("#rvCard"), i = RVS.ply - 1;
+  // 统一结构：标题行 + 按钮行（试一试最左）+ 讲解 + 底部评估
+  const put = (head, btns, body, foot) => {
+    card.innerHTML = `<div class="card"><div class="chd">${head}</div>` +
+      (btns != null ? `<div class="trow">${btns}</div>` : "") +
+      `<div class="explain">${body}</div>` + (foot ? `<div class="muted cft">${foot}</div>` : "") + `</div>`;
+  };
   if (RVS.tryMode) {
     const t = RVS.tryMode, me = SIDE_NAME[t.me];
-    card.innerHTML = `<div class="card"><h3 style="margin:0">试一试 · 你执${me.slice(0, 1)}，电脑全力应对</h3>
-      <div class="explain">${t.over ? t.over : t.msg || `从当前局面开始，轮到${me}走。直接在棋盘上走子，电脑会用最佳走法和你继续下，用来检验你的想法。`}</div></div>`;
+    put(`<h3>试一试 · 你执${me.slice(0, 1)}，电脑全力应对</h3>`, null,
+      t.over ? t.over : t.msg || `从当前局面开始，轮到${me}走。直接在棋盘上走子，电脑会用最佳走法和你继续下，用来检验你的想法。`);
     return;
   }
   if (RVS.vari) {
     const v = RVS.vari, ln = namesOf(v.line, rec.moves.slice(0, v.base)), k = v.idx;
-    let desc;
+    let desc, foot = "";
     if (k === 0) desc = `棋盘回到第 ${Math.floor(v.base / 2) + 1} 回合${SIDE_NAME[v.base % 2]}走棋之前。点下方 <b>▶</b> 走一步，<b>◀</b> 退一步；虚线箭头是下一步。`;
     else {
       const sd = (v.base + k - 1) % 2;
       desc = `第 ${k} 步：${SIDE_NAME[sd]} <b>${ln[k - 1]}</b>` + (v.caps[k - 1] ? `，吃掉${sd ? "红方" : "黑方"}的<b>${PNAME[v.caps[k - 1]]}</b>` : "") + "。";
       if (v.note && v.note[k - 1]) desc += v.note[k - 1];
-      if (k === ln.length) desc += `<br>演示结束${v.final ? "，局面评估：<b>" + v.final + "</b>" : ""}。`;
+      if (k === ln.length) { desc += `<br>演示结束。`; if (v.final) foot = "局面评估：" + v.final; }
       else desc += ` 下一步：${SIDE_NAME[(sd + 1) % 2]}走（虚线箭头）。`;
     }
-    card.innerHTML = `<div class="card"><div class="row"><h3 style="margin:0">${v.label}</h3><span class="sp"></span>${TRY_BTN}</div><div class="explain">${desc}</div></div>`;
+    put(`<h3>${v.label}</h3>`, TRY_BTN, desc, foot);
     bindTry(); return;
   }
-  if (i < 0) { card.innerHTML = `<div class="card"><div class="row"><div class="muted" style="flex:1;min-width:0">${recMeta(rec)}</div>${TRY_BTN}</div><div class="explain">开局局面。点 ▶、着法或在棋盘上左右滑动逐步查看，彩色圆点为每步评级；点「问题步」等标签可只看对应着法，此时上一步/下一步会在这些着法间跳转。</div></div>`; bindTry(); return; }
+  if (i < 0) {
+    put(`<div class="muted">${recMeta(rec)}</div>`, TRY_BTN, `开局局面。点 ▶、着法或在棋盘上左右滑动逐步查看，彩色圆点为每步评级；点「问题步」等标签可只看对应着法，此时上一步/下一步会在这些着法间跳转。`);
+    bindTry(); return;
+  }
   const g = evalMove(rec, i), a = rec.analysis && rec.analysis.plies[i];
   const who = SIDE_NAME[i % 2], isMine = rec.mode !== "ai" || i % 2 === rec.human;
-  let h = `<div class="card"><div class="row"><h3 style="margin:0">第 ${Math.floor(i / 2) + 1} 回合 · ${who} ${names[i]}</h3><span class="sp"></span>`;
-  if (g) h += `<span class="badge" style="background:${GRADES[g.grade].c};font-size:13px">${GRADES[g.grade].n} ${g.pts}分</span>`;
-  else h += TRY_BTN;
-  h += `</div>`;
+  let head = `<h3>第 ${Math.floor(i / 2) + 1} 回合 · ${who} ${names[i]}</h3>`;
+  if (g) head += `<span class="badge" style="background:${GRADES[g.grade].c};font-size:13px">${GRADES[g.grade].n} ${g.pts}分</span>`;
+  let btns = TRY_BTN, body, foot = "";
   if (g && a) {
-    h += `<div class="trow">${TRY_BTN}`;
-    if (a.best !== rec.moves[i]) h += `<button class="btn sm primary" id="cBest">▶ 演示推荐走法</button>`;
-    h += `<button class="btn sm" id="cPlayed">▶ ${a.best === rec.moves[i] ? "演示后续变化" : "你的走法后续"}</button>`;
-    h += `</div>`;
-    h += `<div class="explain">${g.text}</div>`;
-    h += `<div class="muted" style="margin-top:6px">${g.cat ? `问题类型：<span class="tag">${CATS[g.cat].n}</span> · ` : ""}走后评估：${scoreText(a.playedScore, i % 2)} · 深度 ${a.depth}</div>`;
+    if (a.best !== rec.moves[i]) btns += `<button class="btn sm primary" id="cBest">▶︎ 演示推荐走法</button>`;
+    btns += `<button class="btn sm" id="cPlayed">▶︎ ${a.best === rec.moves[i] ? "演示后续变化" : "你的走法后续"}</button>`;
+    body = g.text;
+    foot = `${g.cat ? `问题类型：<span class="tag">${CATS[g.cat].n}</span> · ` : ""}走后评估：${scoreText(a.playedScore, i % 2)} · 深度 ${a.depth}`;
   } else if (!isMine) {
     const nx = rec.analysis && rec.analysis.plies[i + 1];
-    h += `<div class="muted" style="margin-top:4px">电脑的走法${nx ? " · 走后评估：" + scoreText(nx.bestScore, (i + 1) % 2) : ""}</div>`;
-    if (nx) h += `<div class="explain">对此最好的应着是 <b>${namesOf([nx.best], rec.moves.slice(0, i + 1))[0]}</b>。</div>`;
-  } else h += `<div class="muted thinking" style="margin-top:6px">等待分析</div>`;
-  h += `</div>`;
-  card.innerHTML = h;
+    body = nx ? `电脑的走法。对此最好的应着是 <b>${namesOf([nx.best], rec.moves.slice(0, i + 1))[0]}</b>。` : `电脑的走法。`;
+    if (nx) foot = "走后评估：" + scoreText(nx.bestScore, (i + 1) % 2);
+  } else body = `<span class="muted thinking">等待分析</span>`;
+  put(head, btns, body, foot);
   const b1 = $("#cBest"), b2 = $("#cPlayed");
   if (b1) b1.onclick = () => startVari("best");
   if (b2) b2.onclick = () => startVari("played");
@@ -2210,7 +2244,8 @@ function setReviewView() {
   }
   view.bd = RV.board();
   view.check = RV.inCheck(RV.side()) ? kingSq(RV.board(), RV.side()) : -1;
-  renderCaps(view.bd, view.flip, RV.side(), sideLabel(rec.mode, rec.human, rec.level));
+  const mg = !wide();
+  renderCaps(view.bd, view.flip, RV.side(), mg ? (sd => rec.mode === "ai" ? (sd === rec.human ? "我" : "电脑") : SIDE_NAME[sd]) : sideLabel(rec.mode, rec.human, rec.level), mg);
   drawBoard();
 }
 function drawEvalGraph() {
@@ -2442,6 +2477,7 @@ function switchTab(t) {
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
   document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "pg-" + t));
   document.body.classList.toggle("noboard", !["play", "review"].includes(t));
+  document.body.classList.toggle("rv", t === "review");
   $("#pages").classList.toggle("fix", ["play", "review"].includes(t));
   $("#pages").scrollTop = 0;
   sel = -1; targets = [];
@@ -2466,7 +2502,14 @@ function layout() {
     const top = (parseFloat(getComputedStyle($("#app")).paddingTop) || 0) + (parseFloat(getComputedStyle($("#main")).paddingTop) || 0);
     const tabs = $("#tabs").offsetHeight;
     const bars = $("#capTop").offsetHeight + $("#capBot").offsetHeight;
-    const minPanel = curTab === "review" ? (vh >= 780 ? 336 : vh >= 700 ? 282 : 252) : 170;
+    let minPanel = 170;
+    if (curTab === "review") {
+      const cardMin = vh >= 780 ? 150 : vh >= 700 ? 140 : 120; // 说明卡片至少保留的高度（超出部分卡片内滚动）
+      const pg = $("#pg-review"), rc = $("#rvCard"), ps = getComputedStyle($("#pages"));
+      const ar = pg && pg.querySelector(".anaRow"); // 分析进度条是临时的，不计入（分析期间卡片内滚动）
+      if (pg && rc && pg.offsetHeight) minPanel = pg.offsetHeight - rc.offsetHeight - (ar ? ar.offsetHeight + 6 : 0) + cardMin + (parseFloat(ps.paddingTop) || 0) + (parseFloat(ps.paddingBottom) || 0);
+      else minPanel = vh >= 780 ? 310 : vh >= 700 ? 270 : 240;
+    }
     w = Math.min(vw - (parseFloat(getComputedStyle($("#app")).paddingLeft) || 0) * 2, (vh - top - tabs - bars - minPanel) * 10 / 11);
   }
   cell = Math.max(24, Math.floor(w / 10));

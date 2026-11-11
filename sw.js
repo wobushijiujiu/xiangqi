@@ -1,6 +1,6 @@
 // 离线缓存 + 自动更新：
 // 页面本身「联网优先」（有网就取最新版，3 秒取不到或离线时用缓存），图标等静态文件「缓存优先」。
-const CACHE = "xiangqi-v8";
+const CACHE = "xiangqi-v9";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-180.png"];
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: "reload" }))))); });
 self.addEventListener("activate", e => {
