@@ -36,7 +36,7 @@ button, select, input { font: inherit; }
   padding: var(--safe-t) var(--safe-r) 0 var(--safe-l); }
 /* 刘海/状态栏区域：由页面自己绘制，随皮肤变化（状态栏文字为白色，浅色皮肤用深色条） */
 /* iOS 会取页面最顶部的颜色给状态栏着色：所有页面顶部都放同一条状态栏色，切页不会变色 */
-#notch { position: fixed; left: 0; right: 0; top: 0; height: max(var(--safe-t), var(--topH, 3px)); background: linear-gradient(var(--top, #4a2f19), var(--top, #4a2f19) var(--safe-t), var(--topFade, var(--top, #4a2f19))); z-index: 5; pointer-events: none; }
+#notch { position: fixed; left: 0; right: 0; top: 0; height: max(var(--safe-t), 3px); background: var(--top, #4a2f19); z-index: 5; pointer-events: none; }
 /* 手机横屏：提示竖屏使用 */
 #rotate { display: none; }
 @media (orientation: landscape) and (max-height: 540px) and (pointer: coarse) {
@@ -54,7 +54,7 @@ button, select, input { font: inherit; }
 #main { flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0; }
 #boardWrap { flex: none; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; position: relative; }
 #cv { display: block; touch-action: none; }
-#panel { box-shadow: var(--panelShadow, none); flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-radius: 14px 14px 0 0; overflow: hidden; }
+#panel { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-radius: 14px 14px 0 0; overflow: hidden; }
 #pages { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 12px 14px; min-height: 0; }
 .page { display: none; } .page.on { display: block; }
 /* 对局/复盘页：页面本身不滚动，只有内部列表滚动 */
@@ -132,7 +132,8 @@ body.rv #pages.fix { padding-top: 6px; padding-bottom: 4px; }
 #tabs button .ic { font-size: 19px; line-height: 1; font-family: "XQKai", "Kaiti SC", STKaiti, KaiTi, serif; font-weight: bold; }
 #tabs button.on { color: var(--accent); }
 body.noboard #boardWrap { display: none; }
-body.noboard #main { padding-top: 6px; }
+/* 谱/析/设页：面板上方一整块顶栏色，衬出面板圆角（浅色皮肤也一样） */
+body.noboard #main { padding-top: 6px; background: var(--top); }
 
 @media (min-width: 820px) and (min-height: 541px) and (min-aspect-ratio: 1/1) {
   #main { flex-direction: row; padding: 12px 12px 12px; gap: 14px; }
@@ -158,7 +159,7 @@ body.noboard #main { padding-top: 6px; }
   #rvCard { flex: none; max-height: 42%; margin-top: 8px; }
   #rvCard .card { flex: 0 1 auto; }
   .playList { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
-  body.noboard #main { padding-top: 12px; }
+  body.noboard #main { padding-top: 12px; background: none; }
 }
 
 .btn { border: 1px solid rgba(0,0,0,.12); background: var(--btn); color: var(--btnText); padding: 9px 12px; border-radius: 10px; font-size: 15px; cursor: pointer; }
@@ -325,7 +326,7 @@ function createEngine() {
   // 局面状态
   var bd = new Int8Array(90), sd = 0, zl = 0, zh = 0, vr = 0, vb = 0;
   var kingSq = new Int16Array(2), cnt = new Int8Array(16);
-  var STK = 1024;
+  var STK = 4096; // 走子栈：整局着法 + 搜索深度，留足余量
   var sMove = new Int32Array(STK), sCap = new Int8Array(STK), sZl = new Int32Array(STK), sZh = new Int32Array(STK);
   var top = 0; // 栈顶（已走步数）
 
@@ -485,9 +486,14 @@ function createEngine() {
 
   // 置换表
   var TTB = 19, TTS = 1 << TTB, TTM = TTS - 1;
-  var tLock = new Int32Array(TTS), tKey = new Int32Array(TTS), tMove = new Int32Array(TTS),
-      tScore = new Int32Array(TTS), tDepth = new Int8Array(TTS), tFlag = new Int8Array(TTS);
-  function ttClear() { tFlag.fill(0); }
+  // 置换表约 9MB，只在真正搜索时才分配：只做规则判定的引擎实例（主线程上有好几个）不占这块内存
+  var tLock = null, tKey, tMove, tScore, tDepth, tFlag;
+  function ttInit() {
+    if (tLock) return;
+    tLock = new Int32Array(TTS); tKey = new Int32Array(TTS); tMove = new Int32Array(TTS);
+    tScore = new Int32Array(TTS); tDepth = new Int8Array(TTS); tFlag = new Int8Array(TTS);
+  }
+  function ttClear() { if (tFlag) tFlag.fill(0); }
   function ttStore(depth, flag, score, mv, ply) {
     var i = zl & TTM;
     if (tFlag[i] && tLock[i] === zh && tKey[i] === zl && tDepth[i] > depth && !mv) return;
@@ -701,7 +707,7 @@ function createEngine() {
   function setMoves(moves) { reset(); for (var i = 0; i < moves.length; i++) make(moves[i]); }
 
   function think(o) {
-    setMoves(o.moves);
+    ttInit(); setMoves(o.moves);
     rootExclude = o.exclude && o.exclude.length ? o.exclude : null;
     rootDraw = o.draws && o.draws.length ? o.draws : null;
     var L = LEVELS[o.level] || LEVELS[5];
@@ -724,7 +730,7 @@ function createEngine() {
 
   // 复盘：分析一步棋
   function analyzePly(o) {
-    setMoves(o.moves);
+    ttInit(); setMoves(o.moves);
     var a = iterate(o.maxDepth || 30, o.timeMs || 800);
     var r = { best: a.move, bestScore: a.score, bestPV: a.pv, depth: a.depth };
     if (o.played === a.move || !o.played) { r.playedScore = a.score; r.playedPV = a.pv.slice(); }
@@ -732,13 +738,14 @@ function createEngine() {
       make(o.played);
       var b = iterate(Math.max(1, (o.maxDepth || 30) - 1), o.timeMs || 800);
       unmake();
-      var lg = legalAfter(o.played);
-      r.playedScore = lg ? -b.score : MATE; // 对方无子可走
+      // 换算回走这步之前的视角：杀棋分数要多算一步，和 bestScore 的步数口径一致（否则会显示成「0 步杀」）
+      var ps = -b.score;
+      if (ps > WIN) ps -= 1; else if (ps < -WIN) ps += 1;
+      r.playedScore = ps;
       r.playedPV = [o.played].concat(b.pv);
     }
     return r;
   }
-  function legalAfter(m) { make(m); var n = legal().length; unmake(); return n; }
 
   function snapshot() { return Array.prototype.slice.call(bd); }
 
@@ -790,12 +797,48 @@ const fmtDate = ts => { const d = new Date(ts); const p = n => String(n).padStar
 /* ======================= 存储 ======================= */
 const LS = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { toast("存储空间不足，请在设置中导出并清理历史"); return false; } }
+  set(k, v, quiet) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { if (!quiet) toast("存储空间不足，请在设置中导出并清理历史"); return false; } }
 };
 const settings = Object.assign({ skin: "wood", sound: true, dots: true, anim: true, coords: true, strength: "std", lastLevel: 4, lastSide: 0, lastMode: "ai" }, LS.get("xq_settings", {}));
 const saveSettings = () => LS.set("xq_settings", settings);
 let records = LS.get("xq_records", []);
-const saveRecords = () => LS.set("xq_records", records);
+function saveRecords() {
+  if (LS.set("xq_records", records, true)) return true;
+  // 存储空间不足：从最早的对局开始丢弃分析结果（棋谱保留，之后可重新分析），直到存得下
+  let freed = 0;
+  for (let i = records.length - 1; i >= 0; i--) {
+    const r = records[i];
+    if (!r.analysis || (RVS && RVS.rec === r) || anaRunning === r.id) continue;
+    r.analysis = null; freed++;
+    if (freed % 5 === 0 && LS.set("xq_records", records, true)) { toast("存储空间不足，已清除较早对局的分析结果（棋谱保留）", 3000); return true; }
+  }
+  if (freed && LS.set("xq_records", records, true)) { toast("存储空间不足，已清除较早对局的分析结果（棋谱保留）", 3000); return true; }
+  toast("存储空间不足，请在设置中导出备份并清理历史", 3000); return false;
+}
+function addRecord(rec) { records.unshift(rec); if (records.length > 300) records.length = 300; saveRecords(); }
+// 导入的备份文件不可信：逐条校验（着法必须合法、字段类型正确），不合格的丢弃
+function cleanRecord(r) {
+  if (!r || typeof r.id !== "string" || !/^[\w-]{1,40}$/.test(r.id) || !Array.isArray(r.moves) || r.moves.length > 2000) return null;
+  TMP.reset();
+  for (const m of r.moves) { if (!Number.isInteger(m) || !TMP.legal().includes(m)) return null; TMP.make(m); }
+  const num = (v, d) => Number.isFinite(v) ? v : d, pvp = r.mode === "pvp";
+  const out = { id: r.id, start: num(r.start, Date.now()), end: num(r.end, 0), mode: pvp ? "pvp" : "ai",
+    level: Math.max(1, Math.min(10, num(r.level, 4) | 0)), human: pvp ? null : (r.human === 1 ? 1 : 0), moves: r.moves.slice(),
+    result: ["r", "b", "d", "a"].includes(r.result) ? r.result : "a", reason: String(r.reason || "").slice(0, 40),
+    undos: num(r.undos, 0), hints: num(r.hints, 0), analysis: null };
+  const A = r.analysis;
+  if (A && A.plies && typeof A.plies === "object") {
+    const ints = a => Array.isArray(a) && a.every(Number.isInteger), plies = {};
+    let ok = true;
+    for (const k in A.plies) {
+      const p = A.plies[k];
+      if (!/^\d+$/.test(k) || +k >= r.moves.length || !p || !Number.isInteger(p.best) || !Number.isFinite(p.bestScore) || !Number.isFinite(p.playedScore) || !Number.isFinite(p.depth) || !ints(p.bestPV) || !ints(p.playedPV)) { ok = false; break; }
+      plies[k] = { best: p.best, bestScore: p.bestScore, bestPV: p.bestPV.slice(0, 16), depth: p.depth, playedScore: p.playedScore, playedPV: p.playedPV.slice(0, 16) };
+    }
+    if (ok) out.analysis = { strength: ["quick", "std", "deep"].includes(A.strength) ? A.strength : "std", plies, done: !!A.done };
+  }
+  return out;
+}
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
 /* ======================= 引擎 ======================= */
@@ -803,15 +846,23 @@ const E = createEngine();      // 主线程：规则判定
 const RV = createEngine();     // 复盘局面
 const TMP = createEngine();    // 记谱、变化计算
 const MATE = E.MATE, WIN = E.WIN;
+let workerURL = null;
 function makeClient() {
-  let w = null, seq = 0, cbs = {};
-  const fallback = createEngine();
+  let w = null, seq = 0, cbs = {}, fallback = null;
+  // 没有 Worker 时退回主线程计算（引擎用到时才创建）
+  const local = (msg, res, rej) => setTimeout(() => {
+    try { fallback = fallback || createEngine(); res(msg.cmd === "think" ? fallback.think(msg) : fallback.analyzePly(msg)); } catch (e) { rej(e); }
+  }, 30);
   function spawn() {
     try {
-      const src = document.getElementById("engine-src").textContent + "\ninitEngineWorker();";
-      w = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
-      w.onmessage = e => { const cb = cbs[e.data.id]; delete cbs[e.data.id]; if (cb) e.data.error ? cb.rej(e.data.error) : cb.res(e.data.res); };
-      w.onerror = () => { w = null; };
+      if (!workerURL) workerURL = URL.createObjectURL(new Blob([document.getElementById("engine-src").textContent + "\ninitEngineWorker();"], { type: "text/javascript" }));
+      const me = w = new Worker(workerURL);
+      me.onmessage = e => { const cb = cbs[e.data.id]; delete cbs[e.data.id]; if (cb) e.data.error ? cb.rej(e.data.error) : cb.res(e.data.res); };
+      me.onerror = () => { // Worker 起不来或崩溃：未完成的请求改在主线程算，避免一直停在「思考中」
+        if (w !== me) return;
+        const pend = cbs; cbs = {}; w = null;
+        for (const k in pend) local(pend[k].msg, pend[k].res, pend[k].rej);
+      };
     } catch (e) { w = null; }
   }
   spawn();
@@ -819,8 +870,8 @@ function makeClient() {
     call(msg) {
       return new Promise((res, rej) => {
         msg.id = ++seq;
-        if (w) { cbs[msg.id] = { res, rej }; w.postMessage(msg); }
-        else setTimeout(() => { try { res(msg.cmd === "think" ? fallback.think(msg) : fallback.analyzePly(msg)); } catch (e) { rej(e); } }, 30);
+        if (w) { cbs[msg.id] = { res, rej, msg }; w.postMessage(msg); }
+        else local(msg, res, rej);
       });
     },
     cancel() {
@@ -835,7 +886,7 @@ const PNAME = ["", "帅", "仕", "相", "马", "车", "炮", "兵", "", "将", "
 const TNAME = ["", "帥", "仕", "相", "馬", "俥", "炮", "兵", "", "將", "士", "象", "馬", "車", "砲", "卒"]; // 青花瓷皮肤用繁体隶书
 const PTYPE = ["", "帅/将", "仕/士", "相/象", "马", "车", "炮", "兵/卒"];
 const SIDE_NAME = ["红方", "黑方"];
-const APP_VER = "v13";
+const APP_VER = "v14";
 
 /* ======================= 记谱 ======================= */
 const CN = "一二三四五六七八九", AR = "123456789";
@@ -880,7 +931,7 @@ const crossed = (p, sq) => (p >> 3) === 0 ? ((sq / 9) | 0) <= 4 : ((sq / 9) | 0)
 const SKINS = {
   wood: { name: "经典木纹", css: { bg: "#2b1a0e", bg2: "#5a3b22", panel: "#fbf3e2", card: "#fffaf0", text: "#3b2412", muted: "#8a6a4a", accent: "#b8231a", btn: "#f1dfb8", btnText: "#3b2412", line: "#e3cfa8", topText: "#f5e6c8" },
     b: { a: "#f0cf94", b: "#d6a560", line: "#5b3a1a", river: "#6b4520", pa: "#fff3d6", pb: "#e0b474", edge: "#8a5a2b", red: "#b8231a", black: "#1e1e1e", tex: "wood", glow: 0, coord: "#7a5530" } },
-  ink: { name: "水墨丹青", light: true, css: { bg: "#d9d4c7", bg2: "#efebe2", panel: "#f7f5ef", card: "#fffefb", text: "#222", muted: "#777", accent: "#a61b1b", btn: "#e9e5da", btnText: "#222", line: "#ddd8cb", topText: "#222" },
+  ink: { name: "水墨丹青", notch: "#33302b", css: { bg: "#d9d4c7", bg2: "#efebe2", panel: "#f7f5ef", card: "#fffefb", text: "#222", muted: "#777", accent: "#a61b1b", btn: "#e9e5da", btnText: "#222", line: "#ddd8cb", topText: "#222" },
     b: { a: "#f6f3ea", b: "#e3ddcd", line: "#2b2b2b", river: "#2b2b2b", pa: "#fdfcf7", pb: "#d9d3c3", edge: "#444", red: "#a61b1b", black: "#111", tex: "ink", glow: 0, coord: "#555" } },
   porcelain: { name: "青花瓷韵", css: { bg: "#0b2447", bg2: "#19376d", panel: "#f3f7fc", card: "#ffffff", text: "#13315c", muted: "#5a7aa5", accent: "#1f4e8c", btn: "#dde8f6", btnText: "#13315c", line: "#d3e0f0", topText: "#e8f0fb" },
     b: { a: "#fbfdff", b: "#dbe7f5", line: "#1f4e8c", river: "#1f4e8c", pa: "#ffffff", pb: "#cfdff2", edge: "#1f4e8c", red: "#c0392b", black: "#163a6b", tex: "porcelain", glow: 0, coord: "#3b679e" } },
@@ -902,11 +953,6 @@ function applySkin() {
   for (const [k, v] of [["pa", sk.b.pa], ["pb", sk.b.pb], ["pedge", sk.b.edge], ["pred", sk.b.red], ["pblack", sk.b.black]]) document.documentElement.style.setProperty("--" + k, v);
   const notch = sk.notch || sk.css.bg2;
   document.documentElement.style.setProperty("--top", notch);
-  // 浅色皮肤（状态栏用深色）：顶部色条改为柔和渐隐，面板加细阴影让圆角可见
-  const lightTop = !!sk.notch, ds = document.documentElement.style;
-  ds.setProperty("--topFade", lightTop ? "rgba(51,48,43,0)" : notch);
-  ds.setProperty("--topH", lightTop ? "6px" : "3px");
-  ds.setProperty("--panelShadow", sk.light ? "0 0 0 1px rgba(0,0,0,.13), 0 -2px 10px rgba(0,0,0,.10)" : "none");
   // 换皮肤时重建顶部色条，促使 iOS 重新取色
   const old = $("#notch"); if (old) { const n = document.createElement("div"); n.id = "notch"; old.replaceWith(n); }
   setThemeColor(notch);
@@ -933,7 +979,7 @@ const STYLE = {
 const curSkin = () => SKINS[settings.skin] || SKINS.wood;
 function seeded(n) { let s = n | 0 || 1; return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 100000) / 100000; }; }
 // 视觉居中：离屏渲染字形，取「包围盒中心」与「笔画重心」的折中（行书、象字等不对称字形更稳）
-const glyphCache = {};
+const glyphCache = {}, skinPreview = {};
 function glyphOffset(font, ch) {
   const fam = font.replace(/^(bold )?[\d.]+px /, ""), bold = /^bold /.test(font) ? "bold " : "", key = bold + fam + "|" + ch;
   if (glyphCache[key]) return glyphCache[key];
@@ -1267,6 +1313,7 @@ function drawBoard() {
     ctx.stroke(); ctx.lineCap = "butt";
   }
   let mp = null;
+  if (anim && !view.bd[anim.to]) anim = null; // 动画途中局面已换（切页、快速前进后退、悔棋）：终点没有棋子，放弃动画
   if (anim) {
     const t = (now - anim.t0) / anim.dur;
     if (t >= 1) anim = null;
@@ -1287,7 +1334,7 @@ function drawBoard() {
   }
   if (mp) {
     if (anim.cap) { const [x, y] = scr(anim.to, view.flip), k = Math.max(0, (mp.t - .55) / .45); blitPiece(anim.cap, x, y, false, 1 - k * .35, 1 - k); }
-    blitPiece(view.bd[anim.to] || anim.piece, mp.x, mp.y, true, mp.s);
+    blitPiece(view.bd[anim.to], mp.x, mp.y, true, mp.s);
   }
   if (settings.dots || view.forceDots) for (const sq of view.targets) {
     const [x, y] = scr(sq, view.flip);
@@ -1350,7 +1397,7 @@ function fxStamp(txt, color, t0, dur) { // 大字印章：将 / 胜 / 负 / 和
   } });
   requestFrame();
 }
-function fxCheck(kingSqr) {
+function fxCheck() {
   if (!settings.anim) return;
   const now = performance.now(), st = curSkin().b.tex;
   fxStamp("将", st === "night" ? "#ff4d6d" : "#c0201a", now + 120, 1000);
@@ -1509,6 +1556,8 @@ function saveCurrent() {
 }
 const isAITurn = () => G && !G.result && G.mode === "ai" && E.side() !== G.human;
 const flipPlay = () => G && G.mode === "ai" && G.human === 1;
+// 棋盘当前显示的是不是对局（复盘页、手机上的其它页都不是）
+const playVisible = () => curTab === "play" || (curTab !== "review" && wide());
 
 // 规则判定（对局与「试一试」共用）。H = { hashes, caps, checks } 记录走子历史，eng 为对应局面的引擎
 function judgeH(eng, H) { // 走子后判断胜负；返回 null 或 {result, reason}
@@ -1564,11 +1613,13 @@ const aiOptions = () => aiOptionsH(E, G);
 function applyMove(mv) {
   const cap = pushMove(mv);
   sel = -1; targets = []; hintMove = 0;
-  refreshPlay(); animateMove(mv, cap);
+  refreshPlay();
+  const vis = playVisible(); // 人在复盘页时电脑落子：不在复盘棋盘上播放对局的动画
+  if (vis) animateMove(mv, cap);
   const j = judge();
-  if (j) { finishGame(j.result, j.reason); return; }
+  if (j) { finishGame(j.result, j.reason, true); return; }
   const chk = E.inCheck(E.side());
-  if (chk) { sound(cap ? "capture" : "move", MOVE_SOUND_DELAY()); sound("check", MOVE_SOUND_DELAY() + .12); fxCheck(); if (!settings.anim) toast("将军！", 900); }
+  if (chk) { sound(cap ? "capture" : "move", MOVE_SOUND_DELAY()); sound("check", MOVE_SOUND_DELAY() + .12); if (vis) fxCheck(); if (!settings.anim) toast("将军！", 900); }
   else sound(cap ? "capture" : "move", MOVE_SOUND_DELAY());
   saveCurrent(); maybeAI();
 }
@@ -1586,23 +1637,26 @@ async function maybeAI() {
     thinking = false; G.lastAIScore = r.score;
     if (r.move && E.legal().includes(r.move)) applyMove(r.move);
     else refreshPlay();
-  } catch (e) { if (e !== "cancel") console.error(e); if (G && G.token === token) { thinking = false; refreshPlay(); } }
+  } catch (e) {
+    if (e !== "cancel") { console.error(e); toast("电脑思考出错，可悔棋后重试"); }
+    if (G && G.token === token) { thinking = false; refreshPlay(); }
+  }
 }
-function finishGame(result, reason) {
+function finishGame(result, reason, byMove) { // byMove：由落子结束（绝杀等），而不是认输、议和
   G.result = result; G.reason = reason; G.end = Date.now(); thinking = false;
   const rec = { id: G.id, start: G.start, end: G.end, mode: G.mode, level: G.level, human: G.human, moves: G.moves.slice(),
     result, reason, undos: G.undos, hints: G.hints, analysis: null };
-  if (G.moves.length >= 2) { records.unshift(rec); if (records.length > 300) records.length = 300; saveRecords(); }
+  if (G.moves.length >= 2) addRecord(rec);
   localStorage.removeItem("xq_cur");
   refreshPlay();
   let title, win = null;
   if (result === "d") title = "和棋";
   else if (G.mode === "ai") { win = (result === "r") === (G.human === 0); title = win ? "恭喜，你赢了！🎉" : "很遗憾，你输了"; }
   else title = (result === "r" ? "红方" : "黑方") + "获胜！🎉";
-  const lastCap = G.caps[G.caps.length - 1], d0 = MOVE_SOUND_DELAY();
-  if (G.moves.length) sound(lastCap ? "capture" : "move", d0);
-  sound(win === false ? "lose" : "win", d0 + .25);
-  if (settings.anim && curTab === "play") {
+  const lastCap = G.caps[G.caps.length - 1], d0 = byMove ? MOVE_SOUND_DELAY() : 0;
+  if (byMove) sound(lastCap ? "capture" : "move", d0);
+  sound(win === false ? "lose" : "win", byMove ? d0 + .25 : 0);
+  if (settings.anim && playVisible()) {
     const st = curSkin().b.tex, red = st === "night" ? "#ff4d6d" : "#c0201a", gray = st === "night" ? "#8b93a7" : "#555";
     fxStamp(result === "d" ? "和" : win === false ? "负" : "胜", result === "d" || win === false ? gray : red, performance.now() + 300, 1500);
   }
@@ -1623,8 +1677,8 @@ async function abortCurrentIfNeeded() {
     if (!v) return false;
     aiEngine.cancel(); thinking = false;
     G.result = "a"; G.reason = "中止"; G.end = Date.now();
-    records.unshift({ id: G.id, start: G.start, end: G.end, mode: G.mode, level: G.level, human: G.human, moves: G.moves.slice(), result: "a", reason: "中止", undos: G.undos, hints: G.hints, analysis: null });
-    saveRecords(); localStorage.removeItem("xq_cur");
+    addRecord({ id: G.id, start: G.start, end: G.end, mode: G.mode, level: G.level, human: G.human, moves: G.moves.slice(), result: "a", reason: "中止", undos: G.undos, hints: G.hints, analysis: null });
+    localStorage.removeItem("xq_cur");
   }
   return true;
 }
@@ -1658,7 +1712,7 @@ function undo() {
   if (!G || !G.moves.length) return;
   if (G.result) { toast("对局已结束"); return; }
   if (thinking) { aiEngine.cancel(); thinking = false; }
-  G.token = Math.random();
+  G.token = Math.random(); anim = null;
   popMove();
   if (G.mode === "ai") while (G.moves.length && E.side() !== G.human) popMove();
   if (G.mode === "ai" && E.side() !== G.human) { refreshPlay(); maybeAI(); return; }
@@ -1738,7 +1792,7 @@ function refreshPlay() {
   { const pm = $("#playMoves"); pm.scrollTop = pm.scrollHeight; }
   $("#bUndo").disabled = !G.moves.length || !!G.result;
   $("#bHint").disabled = $("#bDraw").disabled = $("#bResign").disabled = !!G.result || thinking;
-  if (curTab === "play" || (curTab !== "review" && wide())) setPlayView();
+  if (playVisible()) setPlayView();
 }
 function setPlayView() {
   const n = G.moves.length;
@@ -1763,7 +1817,7 @@ function boardHit(e) {
 cv.addEventListener("pointerdown", e => {
   e.preventDefault(); unlockAudio();
   const sq = boardHit(e); if (sq < 0) return;
-  if (curTab === "play" || (wide() && curTab !== "review")) playClick(sq);
+  if (playVisible()) playClick(sq);
   else if (curTab === "review" && RVS && RVS.tryMode) tryClick(sq);
 });
 // 复盘时在棋盘上左右滑动：上一步 / 下一步
@@ -1884,9 +1938,10 @@ async function runAnalysis(rec) {
       if (ana.plies[i]) continue;
       if (anaRunning !== rec.id) return;
       const r = await anaEngine.call({ cmd: "analyze", moves: rec.moves.slice(0, i), played: rec.moves[i], timeMs });
+      r.bestPV = (r.bestPV || []).slice(0, 16); r.playedPV = (r.playedPV || []).slice(0, 16); // 演示最多用 16 步，多存只占空间
       ana.plies[i] = r;
       saveRecordsSoon();
-      if (RVS && RVS.rec === rec && curTab === "review") renderReview(false);
+      if (RVS && RVS.rec === rec && curTab === "review") renderReview(false, true);
     }
     ana.done = true; saveRecords();
     if (RVS && RVS.rec === rec && curTab === "review") { renderReview(true); toast("分析完成"); }
@@ -1895,7 +1950,6 @@ async function runAnalysis(rec) {
 }
 let saveTimer = null;
 function saveRecordsSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(() => saveRecords(), 1500); }
-function stripCache() {}
 
 function openReview(id, ply, tryIt) {
   const rec = recById(id); if (!rec) return;
@@ -1934,7 +1988,7 @@ function recMeta(rec) {
   const resTxt = rec.result === "d" ? "和棋" : rec.result === "a" ? "中止" : (rec.result === "r" ? "红胜" : "黑胜");
   return `${fmtDate(rec.start)} · ${rec.mode === "ai" ? `${rec.level}级${LEVEL_NAMES[rec.level]} · 我执${rec.human === 0 ? "红" : "黑"}` : "双人"} · ${resTxt}（${esc(rec.reason)}）`;
 }
-function renderReview(full) {
+function renderReview(full, keep) { // keep：分析进度引起的刷新，不打断用户正在看的位置（保留各处滚动位置）
   const pg = $("#pg-review");
   if (!RVS) { pg.innerHTML = `<div class="card muted">还没有选择对局。请在「历史」中选择一局点击「复盘」，或对局结束后点击「复盘分析」。</div>`; return; }
   const rec = RVS.rec, n = rec.moves.length, ana = rec.analysis || { plies: {} };
@@ -1967,6 +2021,7 @@ function renderReview(full) {
   let chips = chip("", "全部");
   if (bad) chips += chip("bad", "问题步 " + bad, "#e67e22");
   chips += Object.keys(GRADES).filter(k => gc[k]).map(k => chip(k, GRADES[k].n + " " + gc[k], GRADES[k].c)).join("");
+  const oldChips = $("#rvHead .chips"), chipsX = oldChips ? oldChips.scrollLeft : 0;
   $("#rvHead").innerHTML = `<div class="rvMeta muted">${recMeta(rec)}</div>
     <div class="rvAcc"><span class="acc">${accHtml}</span><div class="chips">${chips}</div></div>
     ${done < list.length ? `<div class="anaRow muted"><div class="progress"><i style="width:${(done / list.length * 100).toFixed(1)}%"></i></div><span>${anaRunning === rec.id ? `本机分析中 ${done}/${list.length}` : `已分析 ${done}/${list.length}`}</span>${anaRunning === rec.id ? "" : `<button class="btn sm" id="rvGo">继续分析</button>`}</div>` : ""}`;
@@ -1979,6 +2034,7 @@ function renderReview(full) {
     }
     renderReview(false);
   });
+  if (chipsX) $("#rvHead .chips").scrollLeft = chipsX;
   const go = $("#rvGo"); if (go) go.onclick = () => { runAnalysis(rec); renderReview(false); };
   drawEvalGraph();
   // 着法：手机上为横向滑动条，电脑上按回合排成「红 | 黑」两列表格；演示时显示演示变化
@@ -2008,33 +2064,38 @@ function renderReview(full) {
     }
     html += `</div>`;
   }
-  $("#rvMoves").innerHTML = html;
+  const mvBox = $("#rvMoves"), mvX = mvBox.scrollLeft, mvY = mvBox.scrollTop;
+  mvBox.innerHTML = html;
   $("#rvMoves").querySelectorAll("[data-ply]").forEach(d => d.onclick = () => { RVS.vari = null; RVS.tryMode = null; RVS.ply = +d.dataset.ply; sel = -1; targets = []; renderReview(false); });
   $("#rvMoves").querySelectorAll("[data-k]").forEach(d => d.onclick = () => { RVS.vari.idx = +d.dataset.k; renderReview(false); });
   renderBar();
   renderCard(names);
+  if (!keep) anim = null; // 局面跳转：丢弃上一步未播完的动画（前进一步的动画由 stepFx 在此之后重新发起）
   setReviewView();
-  scrollMoveList();
+  if (keep) { mvBox.scrollLeft = mvX; mvBox.scrollTop = mvY; } else scrollMoveList();
 }
 function renderBar() { // 复盘底部操作栏：左侧固定 [◀ 步数 ▶]（三种状态位置完全一致），右侧只在演示/试走时放「退出」
   const bar = $("#rvBar"), rec = RVS.rec, n = rec.moves.length;
   const box = (l, pos, r) => `${l}<span class="pos">${pos}</span>${r}<span class="gap"></span>`;
+  let html;
+  const set = () => { if (bar._h !== html) { bar._h = html; bar.innerHTML = html; } }; // 内容没变就不重建
   if (RVS.tryMode) {
     const t = RVS.tryMode, k = t.line.length;
-    bar.innerHTML = box(`<button class="btn vst" id="tUndo" ${k ? "" : "disabled"}>悔棋</button>`, `<b>${k}</b>试走`,
+    html = box(`<button class="btn vst" id="tUndo" ${k ? "" : "disabled"}>悔棋</button>`, `<b>${k}</b>试走`,
       `<button class="btn vst" id="tHint" ${t.busy || t.over ? "disabled" : ""}>提示</button>`) + `<button class="btn exit" id="tExit">退出</button>`;
-    $("#tUndo").onclick = tryUndo; $("#tHint").onclick = tryHint; $("#tExit").onclick = exitTry;
+    set(); $("#tUndo").onclick = tryUndo; $("#tHint").onclick = tryHint; $("#tExit").onclick = exitTry;
     return;
   }
   if (RVS.vari) {
     const v = RVS.vari;
-    bar.innerHTML = box(`<button class="btn vst" data-nav="prev" ${v.idx ? "" : "disabled"}>◀</button>`, `<b>${v.idx}/${v.line.length}</b>演示`,
+    html = box(`<button class="btn vst" data-nav="prev" ${v.idx ? "" : "disabled"}>◀</button>`, `<b>${v.idx}/${v.line.length}</b>演示`,
       `<button class="btn vst primary" data-nav="next" ${v.idx < v.line.length ? "" : "disabled"}>▶</button>`) + `<button class="btn exit" id="vExit">退出</button>`;
-    $("#vExit").onclick = () => { RVS.vari = null; renderReview(false); };
+    set(); $("#vExit").onclick = () => { RVS.vari = null; renderReview(false); };
   } else {
     const p = RVS.ply, sub = RVS.filter ? "筛选跳转" : p ? `第 ${Math.ceil(p / 2)} 回合` : "开局";
-    bar.innerHTML = box(`<button class="btn vst" data-nav="prev" ${p ? "" : "disabled"}>◀</button>`, `<b>${p}/${n}</b>${sub}`,
+    html = box(`<button class="btn vst" data-nav="prev" ${p ? "" : "disabled"}>◀</button>`, `<b>${p}/${n}</b>${sub}`,
       `<button class="btn vst primary" data-nav="next" ${p < n ? "" : "disabled"}>▶</button>`);
+    set();
   }
   bar.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => navReview(b.dataset.nav));
 }
@@ -2049,9 +2110,10 @@ function renderCard(names) {
   const rec = RVS.rec, card = $("#rvCard"), i = RVS.ply - 1;
   // 统一结构：标题行 + 按钮行（试一试最左）+ 讲解 + 底部评估
   const put = (head, btns, body, foot) => {
-    card.innerHTML = `<div class="card"><div class="chd">${head}</div>` +
+    const html = `<div class="card"><div class="chd">${head}</div>` +
       (btns != null ? `<div class="trow">${btns}</div>` : "") +
       `<div class="explain">${body}</div>` + (foot ? `<div class="muted cft">${foot}</div>` : "") + `</div>`;
+    if (card._h !== html) { card._h = html; card.innerHTML = html; } // 内容没变就不重建，保留滚动位置
   };
   if (RVS.tryMode) {
     const t = RVS.tryMode, me = SIDE_NAME[t.me];
@@ -2100,7 +2162,6 @@ function renderCard(names) {
 }
 const TRY_BTN = `<button class="btn sm try" id="cTry">✎\uFE0E 试一试</button>`;
 function bindTry() { const b = $("#cTry"); if (b) b.onclick = startTry; }
-function stopAuto() {} // 演示改为手动逐步，不再自动播放
 function makeVari(base, line, label, idx, final) {
   const rec = RVS.rec; RV.setMoves(rec.moves.slice(0, base));
   const ok = [], caps = [];
@@ -2308,6 +2369,7 @@ function renderHistory() {
   pg.querySelectorAll("[data-rv]").forEach(b => b.onclick = () => openReview(b.dataset.rv));
   pg.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
     if (await modal(`<h2>删除这局记录？</h2>`, [{ text: "取消", value: false }, { text: "删除", value: true, primary: true }])) {
+      if (anaRunning === b.dataset.del) { anaEngine.cancel(); anaRunning = null; }
       records = records.filter(r => r.id !== b.dataset.del); saveRecords();
       if (RVS && RVS.rec.id === b.dataset.del) RVS = null;
       renderHistory();
@@ -2440,16 +2502,20 @@ function renderSettings() {
   pg.querySelectorAll("[data-skin]").forEach(d => {
     const c = d.querySelector("canvas"), g = c.getContext("2d"), sk = SKINS[d.dataset.skin];
     // 预览：真实棋盘局部（含河界）+ 红黑各一子
-    const pc = 40, bg = renderBg(sk, pc * 10, pc * 11, pc, false, 1);
-    g.drawImage(bg, 48, 164, 200, 120, 0, 0, 200, 120);
-    drawPiece(g, 13, 152, 36, pc, false, sk); drawPiece(g, 6, 112, 76, pc, false, sk);
+    let pv = skinPreview[d.dataset.skin];
+    if (!pv) { // 预览图只画一次，之后直接贴图
+      pv = skinPreview[d.dataset.skin] = document.createElement("canvas"); pv.width = 200; pv.height = 120;
+      const pg2 = pv.getContext("2d"), pc = 40, bg = renderBg(sk, pc * 10, pc * 11, pc, false, 1);
+      pg2.drawImage(bg, 48, 164, 200, 120, 0, 0, 200, 120);
+      drawPiece(pg2, 13, 152, 36, pc, false, sk); drawPiece(pg2, 6, 112, 76, pc, false, sk);
+    }
+    g.drawImage(pv, 0, 0);
     d.onclick = () => { settings.skin = d.dataset.skin; saveSettings(); applySkin(); renderSettings(); };
   });
   pg.querySelectorAll("[data-set]").forEach(i => i.onchange = () => { settings[i.dataset.set] = i.checked; saveSettings(); bgCache = null; drawBoard(); });
   $("#setStr").value = settings.strength;
   $("#setStr").onchange = e => { settings.strength = e.target.value; saveSettings(); };
   $("#bExp").onclick = () => {
-    stripCache();
     const blob = new Blob([JSON.stringify({ app: "xiangqi-offline", v: 1, exported: Date.now(), records, settings })], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `象棋备份_${fmtDate(Date.now()).replace(/[ :]/g, "-")}.json`;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
@@ -2460,16 +2526,21 @@ function renderSettings() {
     const rd = new FileReader();
     rd.onload = () => {
       try {
-        const d = JSON.parse(rd.result); if (!d.records) throw 0;
-        const ids = new Set(records.map(r => r.id)); let n = 0;
-        for (const r of d.records) if (!ids.has(r.id) && Array.isArray(r.moves)) { records.push(r); n++; }
-        records.sort((a, b) => b.start - a.start); saveRecords(); toast(`已导入 ${n} 局`); renderSettings();
+        const d = JSON.parse(rd.result); if (!d || !Array.isArray(d.records)) throw 0;
+        const ids = new Set(records.map(r => r.id)); let n = 0, bad = 0;
+        for (const raw of d.records) {
+          const r = cleanRecord(raw);
+          if (!r) bad++; else if (!ids.has(r.id)) { ids.add(r.id); records.push(r); n++; }
+        }
+        records.sort((a, b) => b.start - a.start); saveRecords();
+        toast(`已导入 ${n} 局` + (bad ? `，跳过 ${bad} 条无效记录` : ""), 2600); renderSettings();
       } catch (err) { toast("文件格式不正确"); }
     };
     rd.readAsText(f);
   };
   $("#bClr").onclick = async () => {
     if (await modal(`<h2>清空全部历史记录？</h2><p class="muted" style="text-align:center">此操作不可恢复，建议先导出备份。</p>`, [{ text: "取消", value: false }, { text: "清空", value: true, primary: true }])) {
+      if (anaRunning) { anaEngine.cancel(); anaRunning = null; }
       records = []; saveRecords(); RVS = null; renderSettings(); toast("已清空");
     }
   };
@@ -2479,8 +2550,7 @@ function renderSettings() {
 let curTab = "play";
 const wide = () => window.matchMedia("(min-width: 820px) and (min-height: 541px) and (min-aspect-ratio: 1/1)").matches;
 function switchTab(t) {
-  if (curTab === "review" && t !== "review") stopAuto();
-  curTab = t;
+  curTab = t; anim = null; FX = []; // 换页即换棋盘内容，丢弃未播完的动画和特效
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
   document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "pg-" + t));
   document.body.classList.toggle("noboard", !["play", "review"].includes(t));
@@ -2522,8 +2592,9 @@ function layout() {
   cell = Math.max(24, Math.floor(w / 10));
   cv.style.width = cell * 10 + "px"; cv.style.height = cell * 11 + "px";
   $("#capTop").style.width = $("#capBot").style.width = cell * 10 + "px";
-  cv.width = cell * 10 * dpr; cv.height = cell * 11 * dpr;
-  bgCache = null; drawBoard();
+  const pw = Math.round(cell * 10 * dpr), ph = Math.round(cell * 11 * dpr);
+  if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; } // 尺寸没变就不重建（底图缓存按格子大小自动失效）
+  drawBoard();
   const wd = wide();
   if (curTab === "review" && RVS && lastWide !== null && wd !== lastWide) renderReview(true); // 横竖屏切换：着法列表换排版
   else if (curTab === "review") { drawEvalGraph(); scrollMoveList(); }
@@ -2578,6 +2649,7 @@ $("#bResign").onclick = resign;
 applySkin();
 if (document.fonts && document.fonts.load) Promise.all(["XQKai", "XQMa", "XQLi", "XQQk", "XQWei"].map(f => document.fonts.load(`40px "${f}"`, "帅将"))).then(() => {
   for (const k in glyphCache) delete glyphCache[k];
+  for (const k in skinPreview) delete skinPreview[k];
   bgCache = null; sprCache = null; drawBoard(); if (curTab === "settings") renderSettings();
 }).catch(() => {});
 (function boot() {
